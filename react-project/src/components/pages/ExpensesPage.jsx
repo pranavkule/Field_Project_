@@ -1,0 +1,103 @@
+import { useState } from "react";
+import C from "../../constants/colors";
+import Badge from "../ui/Badge";
+import Btn from "../ui/Btn";
+import Card from "../ui/Card";
+import Input from "../ui/Input";
+import Modal from "../ui/Modal";
+import PageHeader from "../ui/PageHeader";
+import SearchBar from "../ui/SearchBar";
+import SelectField from "../ui/SelectField";
+import { TH, TD } from "../ui/TableCells";
+
+const ExpensesPage = ({ expenses, setExpenses }) => {
+  const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState("");
+  const [form, setForm] = useState({ date: "", description: "", category: "", amount: "", paymentMode: "Cash", receipt: "" });
+  const filtered = expenses.filter((e) => e.description.toLowerCase().includes(search.toLowerCase()) || e.category.toLowerCase().includes(search.toLowerCase()));
+  const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
+  const catTotals = expenses.reduce((acc, e) => { acc[e.category] = (acc[e.category] || 0) + Number(e.amount); return acc; }, {});
+  const handleAdd = () => {
+    if (!form.description || !form.amount) return;
+    const nid = expenses.length + 1;
+    setExpenses((p) => [{ ...form, id: nid, amount: Number(form.amount), approvedBy: "Admin", receipt: form.receipt || `RCP-${String(nid).padStart(3, "0")}` }, ...p]);
+    setShowAdd(false);
+    setForm({ date: "", description: "", category: "", amount: "", paymentMode: "Cash", receipt: "" });
+  };
+  const catIcons = { Food: "🍽️", Utilities: "💡", Education: "📚", Medical: "💊", Salaries: "💳", Maintenance: "🔧" };
+
+  return (
+    <div style={{ padding: 32 }}>
+      <PageHeader title="Expense Tracker" subtitle="Financial records and budget management" action={<Btn label="Add Expense" icon="+" onClick={() => setShowAdd(true)} />} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20, marginBottom: 24 }}>
+        <Card>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 13, color: C.textMid, fontWeight: 600, marginBottom: 8 }}>TOTAL THIS MONTH</div>
+            <div style={{ fontSize: 38, fontWeight: 800, color: C.primary }}>₹{total.toLocaleString()}</div>
+            <div style={{ fontSize: 13, color: C.textLight, marginTop: 4 }}>{expenses.length} transactions</div>
+          </div>
+        </Card>
+        <Card>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 14 }}>Breakdown by Category</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {Object.entries(catTotals).map(([cat, amt]) => (
+              <div key={cat} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 16 }}>{catIcons[cat] || "📌"}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{cat}</span>
+                    <span style={{ fontSize: 13, color: C.textMid }}>₹{amt.toLocaleString()}</span>
+                  </div>
+                  <div style={{ height: 6, background: C.bg, borderRadius: 4 }}>
+                    <div style={{ height: "100%", width: `${(amt / total) * 100}%`, background: C.primary, borderRadius: 4 }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+      <Card>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <SearchBar value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search expenses..." />
+          <div style={{ fontSize: 13, color: C.textMid }}>{filtered.length} records</div>
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead><tr>{["Date", "Description", "Category", "Amount", "Payment Mode", "Receipt"].map((h) => <TH key={h}>{h}</TH>)}</tr></thead>
+          <tbody>
+            {filtered.map((e, i) => (
+              <tr key={e.id} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#FAFBFC" }}>
+                <TD style={{ color: C.textMid, fontSize: 13 }}>{e.date}</TD>
+                <TD style={{ fontWeight: 600 }}>{e.description}</TD>
+                <TD style={{ color: C.textMid, fontSize: 13 }}>{catIcons[e.category] || "📌"} {e.category}</TD>
+                <TD style={{ fontWeight: 700, fontSize: 15 }}>₹{Number(e.amount).toLocaleString()}</TD>
+                <TD style={{ color: C.textMid, fontSize: 13 }}>{e.paymentMode}</TD>
+                <TD><span style={{ padding: "3px 10px", background: C.bg, borderRadius: 6, fontSize: 12, fontWeight: 600, color: C.textMid }}>{e.receipt}</span></TD>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+      {showAdd && (
+        <Modal title="Add Expense" onClose={() => setShowAdd(false)}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <Input label="Date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+            <SelectField label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} options={["Food", "Utilities", "Education", "Medical", "Salaries", "Maintenance", "Events", "Transport", "Other"]} required />
+            <div style={{ gridColumn: "span 2" }}>
+              <Input label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="What was this expense for?" required />
+            </div>
+            <Input label="Amount (₹)" type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0" required />
+            <SelectField label="Payment Mode" value={form.paymentMode} onChange={(e) => setForm({ ...form, paymentMode: e.target.value })} options={["Cash", "Bank Transfer", "Online", "Cheque", "UPI"]} />
+            <Input label="Receipt No. (optional)" value={form.receipt} onChange={(e) => setForm({ ...form, receipt: e.target.value })} placeholder="e.g. RCP-007" />
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
+            <Btn label="Cancel" variant="ghost" onClick={() => setShowAdd(false)} />
+            <Btn label="Add Expense" onClick={handleAdd} />
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+export default ExpensesPage;

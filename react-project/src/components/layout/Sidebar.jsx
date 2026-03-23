@@ -1,0 +1,47 @@
+import C from "../../constants/colors";
+
+const NAV = [
+  { id: "dashboard", label: "Dashboard", icon: "⊞" },
+  { id: "children", label: "Child Directory", icon: "👦" },
+  { id: "staff", label: "Staff Directory", icon: "👥" },
+  { id: "health", label: "Health Desk", icon: "🏥" },
+  { id: "attendance", label: "Staff Attendance", icon: "📋" },
+  { id: "inventory", label: "Inventory & Needs", icon: "📦" },
+  { id: "expenses", label: "Expense Tracker", icon: "💰" },
+];
+
+const Sidebar = ({ active, setPage, onLogout }) => (
+  <aside style={{ width: 240, background: C.white, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0 }}>
+    <div style={{ padding: "24px 24px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>❤️</div>
+        <div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: C.text, letterSpacing: -0.5 }}>Care<span style={{ color: C.primary }}>Sync</span></div>
+          <div style={{ fontSize: 10, color: C.textLight }}>Record Management</div>
+        </div>
+      </div>
+    </div>
+    <nav style={{ flex: 1, padding: "8px 14px", overflowY: "auto" }}>
+      {NAV.map((n) => (
+        <button
+          key={n.id}
+          onClick={() => setPage(n.id)}
+          style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderRadius: 12, border: "none", cursor: "pointer", marginBottom: 2, textAlign: "left", fontSize: 14, fontWeight: active === n.id ? 700 : 500, background: active === n.id ? C.primaryLight : "transparent", color: active === n.id ? C.primary : C.textMid, fontFamily: "inherit" }}
+        >
+          <span style={{ fontSize: 17 }}>{n.icon}</span>
+          {n.label}
+        </button>
+      ))}
+    </nav>
+    <div style={{ padding: 14, borderTop: `1px solid ${C.border}` }}>
+      <button
+        onClick={onLogout}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, color: C.danger, background: "#FEF2F2", fontFamily: "inherit" }}
+      >
+        <span style={{ fontSize: 17 }}>🚪</span> Logout
+      </button>
+    </div>
+  </aside>
+);
+
+export default Sidebar;
