@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  user_id      String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password_hash String
+  role         String
+  created_at   DateTime @default(now())
+
+  children     Child[]
+  health_records HealthRecord[]
+  staff        Staff[]
+  staff_attendances StaffAttendance[]
+  donations    Donation[]
+  inventory    Inventory[]
+  expenses     Expense[]
+}
+
+model Child {
+  child_id         String   @id @default(uuid())
+  first_name       String
+  last_name        String
+  date_of_birth    DateTime
+  gender           String
+  admission_date   DateTime
+  status           String
+  guardian_name    String
+  guardian_contact String
+  address          String
+  blood_group      String
+  medical_condition String
+  education_level  String
+  photo_url        String?
+  user_id          String
+  created_at       DateTime @default(now())
+
+  user            User     @relation(fields: [user_id], references: [user_id])
+  health_records  HealthRecord[]
+}
+
+model HealthRecord {
+  health_id     String   @id @default(uuid())
+  child_id      String
+  weight        Float
+  height        Float
+  temperature   Float
+  blood_pressure String
+  pulse         Int
+  medical_notes String
+  record_date   DateTime
+  user_id       String
+  created_at    DateTime @default(now())
+
+  child         Child    @relation(fields: [child_id], references: [child_id])
+  user          User     @relation(fields: [user_id], references: [user_id])
+}
+
+model Staff {
+  staff_id       String   @id @default(uuid())
+  first_name     String
+  last_name      String
+  role           String
+  contact_number String
+  email          String   @unique
+  joining_date   DateTime
+  salary         Float
+  status         String
+  user_id        String
+  created_at     DateTime @default(now())
+
+  user           User     @relation(fields: [user_id], references: [user_id])
+  attendances    StaffAttendance[]
+}
+
+model StaffAttendance {
+  attendance_id   String   @id @default(uuid())
+  staff_id        String
+  attendance_date DateTime
+  status          String
+  remarks         String?
+  user_id         String
+  created_at      DateTime @default(now())
+
+  staff           Staff    @relation(fields: [staff_id], references: [staff_id])
+  user            User     @relation(fields: [user_id], references: [user_id])
+}
+
+model Donation {
+  donation_id      String   @id @default(uuid())
+  item_name        String
+  category         String
+  quantity_required Int
+  quantity_received Int
+  priority         String
+  donor_name       String
+  date_received    DateTime
+  is_active        Boolean
+  user_id          String
+  created_at       DateTime @default(now())
+
+  user             User     @relation(fields: [user_id], references: [user_id])
+}
+
+model Inventory {
+  item_id          String   @id @default(uuid())
+  item_name        String
+  category         String
+  quantity_available Int
+  user_id          String
+  last_updated     DateTime @default(now())
+
+  user             User     @relation(fields: [user_id], references: [user_id])
+}
+
+model Expense {
+  expense_id      String   @id @default(uuid())
+  expense_category String
+  description      String
+  amount           Float
+  expense_date     DateTime
+  payment_mode     String
+  user_id          String
+  created_at       DateTime @default(now())
+
+  user             User     @relation(fields: [user_id], references: [user_id])
+}

@@ -6,11 +6,11 @@ const LandingPage = ({ onLogin, onSignup }) => (
   <div style={{ minHeight: "100vh", background: C.white, fontFamily: "inherit" }}>
     <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 60px", height: 64, borderBottom: `1px solid ${C.border}`, position: "sticky", top: 0, background: "rgba(255,255,255,0.96)", backdropFilter: "blur(8px)", zIndex: 100 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>❤️</div>
+        <div style={{ width: 30, height: 30, borderRadius: 8, background: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: C.white }}>CS</div>
         <span style={{ fontSize: 18, fontWeight: 800, color: C.text }}>Care<span style={{ color: C.primary }}>Sync</span></span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <Btn label="Login" variant="ghost" onClick={onLogin} />
+        <Btn label="Register" variant="ghost" onClick={onSignup} />
         <Btn label="Institution Login →" onClick={onLogin} />
       </div>
     </nav>
@@ -74,7 +74,7 @@ const LandingPage = ({ onLogin, onSignup }) => (
         <h2 style={{ fontSize: 36, fontWeight: 800, color: C.text, margin: 0 }}>Who is CareSync for?</h2>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        {[{ icon: "🏠", title: "Child Care Institutions", desc: "Orphanages and child care homes that want to digitize managing their residents, track health records, attendance, and finances.", points: ["Manage resident records", "Track health & attendance", "Monitor inventory & expenses"] }, { icon: "🌐", title: "NGO Supporters & Donors", desc: "For NGOs and individuals who want to support child care institutions. Browse registered institutions and see their current needs.", points: ["Browse registered institutions", "View specific needs & requirements", "Get in touch directly"] }].map((f) => (
+        {[{ icon: "🏠", title: "Child Care Institutions", desc: "Orphanages and child care homes that want to digitize managing their residents, track health records, attendance, and finances.", points: ["Manage resident records", "Track health & attendance", "Monitor inventory & expenses"] }].map((f) => (
           <Card key={f.title} style={{ padding: 32 }}>
             <div style={{ fontSize: 36, marginBottom: 16 }}>{f.icon}</div>
             <h3 style={{ fontSize: 20, fontWeight: 700, color: C.text, margin: "0 0 10px" }}>{f.title}</h3>
@@ -91,7 +91,7 @@ const LandingPage = ({ onLogin, onSignup }) => (
     </div>
     <footer style={{ borderTop: `1px solid ${C.border}`, padding: "24px 60px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 24, height: 24, borderRadius: 6, background: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>❤️</div>
+        <div style={{ width: 24, height: 24, borderRadius: 6, background: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: C.white }}>CS</div>
         <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>CareSync</span>
         <span style={{ fontSize: 13, color: C.textLight }}>— A record management system built for child care institutions.</span>
       </div>

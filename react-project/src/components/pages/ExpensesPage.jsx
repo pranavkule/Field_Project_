@@ -9,20 +9,57 @@ import PageHeader from "../ui/PageHeader";
 import SearchBar from "../ui/SearchBar";
 import SelectField from "../ui/SelectField";
 import { TH, TD } from "../ui/TableCells";
+import expenseAPI from "../../api/expenseService";
 
 const ExpensesPage = ({ expenses, setExpenses }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ date: "", description: "", category: "", amount: "", paymentMode: "Cash", receipt: "" });
   const filtered = expenses.filter((e) => e.description.toLowerCase().includes(search.toLowerCase()) || e.category.toLowerCase().includes(search.toLowerCase()));
   const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
   const catTotals = expenses.reduce((acc, e) => { acc[e.category] = (acc[e.category] || 0) + Number(e.amount); return acc; }, {});
-  const handleAdd = () => {
+  
+  const handleAdd = async () => {
     if (!form.description || !form.amount) return;
-    const nid = expenses.length + 1;
-    setExpenses((p) => [{ ...form, id: nid, amount: Number(form.amount), approvedBy: "Admin", receipt: form.receipt || `RCP-${String(nid).padStart(3, "0")}` }, ...p]);
-    setShowAdd(false);
-    setForm({ date: "", description: "", category: "", amount: "", paymentMode: "Cash", receipt: "" });
+    
+    setLoading(true);
+    setError("");
+    
+    try {
+      // Call backend API using backend field names
+      const response = await expenseAPI.create({
+        expense_category: form.category || "Miscellaneous",
+        description: form.description,
+        amount: Number(form.amount),
+        expense_date: form.date ? new Date(form.date).toISOString() : new Date().toISOString(),
+        payment_mode: form.paymentMode,
+      });
+      
+      // Add to local state using UI-friendly structure
+      const newExpense = response.data.data;
+      setExpenses((p) => [
+        {
+          id: newExpense.expense_id,
+          date: newExpense.expense_date ? new Date(newExpense.expense_date).toISOString().split('T')[0] : "",
+          description: newExpense.description,
+          category: newExpense.expense_category,
+          amount: newExpense.amount,
+          paymentMode: newExpense.payment_mode,
+          receipt: form.receipt || "",
+        },
+        ...p,
+      ]);
+      
+      // Clear form and close modal
+      setShowAdd(false);
+      setForm({ date: "", description: "", category: "", amount: "", paymentMode: "Cash", receipt: "" });
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to add expense. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
   const catIcons = { Food: "🍽️", Utilities: "💡", Education: "📚", Medical: "💊", Salaries: "💳", Maintenance: "🔧" };
 
@@ -80,6 +117,7 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
       </Card>
       {showAdd && (
         <Modal title="Add Expense" onClose={() => setShowAdd(false)}>
+          {error && <div style={{ background: "#FEF2F2", color: C.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{error}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <Input label="Date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
             <SelectField label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} options={["Food", "Utilities", "Education", "Medical", "Salaries", "Maintenance", "Events", "Transport", "Other"]} required />
@@ -92,7 +130,7 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
             <Btn label="Cancel" variant="ghost" onClick={() => setShowAdd(false)} />
-            <Btn label="Add Expense" onClick={handleAdd} />
+            <Btn label={loading ? "Adding..." : "Add Expense"} onClick={handleAdd} disabled={loading} />
           </div>
         </Modal>
       )}

@@ -10,18 +10,76 @@ import Modal from "../ui/Modal";
 import PageHeader from "../ui/PageHeader";
 import SearchBar from "../ui/SearchBar";
 import SelectField from "../ui/SelectField";
+import staffAPI from "../../api/staffService";
 
 const StaffDirectory = ({ staff, setStaff }) => {
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: "", role: "", dept: "", phone: "", email: "", joinDate: "", shift: "Morning" });
   const filtered = staff.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()) || s.role.toLowerCase().includes(search.toLowerCase()));
-  const handleAdd = () => {
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleAdd = async () => {
     if (!form.name || !form.role) return;
-    const initials = form.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-    setStaff((p) => [...p, { ...form, id: p.length + 1, status: "Active", photo: initials }]);
-    setShowAdd(false);
-    setForm({ name: "", role: "", dept: "", phone: "", email: "", joinDate: "", shift: "Morning" });
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await staffAPI.create({
+        first_name: form.name.split(" ")[0] || form.name,
+        last_name: form.name.split(" ").slice(1).join(" ") || "",
+        role: form.role,
+        department: form.dept,
+        contact_number: form.phone,
+        email: form.email,
+        joining_date: form.joinDate ? new Date(form.joinDate) : null,
+        salary: 0,
+        status: "Active",
+      });
+  
+      // existing successful add code continues...
+
+      const newStaff = response.data.data;
+      setStaff((p) => [
+        ...p,
+        {
+          id: newStaff.staff_id,
+          name: `${newStaff.first_name || ""} ${newStaff.last_name || ""}`.trim(),
+          role: newStaff.role,
+          dept: form.dept,
+          phone: newStaff.contact_number,
+          email: newStaff.email,
+          joinDate: newStaff.joining_date ? new Date(newStaff.joining_date).toISOString().split('T')[0] : "",
+          shift: form.shift,
+          status: newStaff.status || "Active",
+          photo: form.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2),
+        },
+      ]);
+      setShowAdd(false);
+      setForm({ name: "", role: "", dept: "", phone: "", email: "", joinDate: "", shift: "Morning" });
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to add staff. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm("Delete this staff member permanently?");
+    if (!confirmDelete) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      await staffAPI.delete(id);
+      setStaff((p) => p.filter((item) => item.id !== id));
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete staff. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -48,7 +106,25 @@ const StaffDirectory = ({ staff, setStaff }) => {
                   <span>{val}</span>
                 </div>
               ))}
-              <div style={{ marginTop: 12 }}><Badge label={s.status} color={statusColor(s.status)} /></div>
+              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Badge label={s.status} color={statusColor(s.status)} />
+                <button
+                  onClick={() => handleDelete(s.id)}
+                  style={{
+                    border: `1px solid ${C.danger}`,
+                    background: C.danger + '10',
+                    color: C.danger,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    borderRadius: 8,
+                    padding: '5px 10px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -67,8 +143,9 @@ const StaffDirectory = ({ staff, setStaff }) => {
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
             <Btn label="Cancel" variant="ghost" onClick={() => setShowAdd(false)} />
-            <Btn label="Add Staff" onClick={handleAdd} />
+            <Btn label={loading ? "Saving..." : "Add Staff"} onClick={handleAdd} disabled={loading} />
           </div>
+          {error && <div style={{ marginTop: 14, color: C.danger, fontSize: 13 }}>{error}</div>}
         </Modal>
       )}
     </div>

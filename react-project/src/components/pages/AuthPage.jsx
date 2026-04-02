@@ -2,18 +2,71 @@ import { useState } from "react";
 import C from "../../constants/colors";
 import Btn from "../ui/Btn";
 import Input from "../ui/Input";
+import apiClient from "../../api/apiClient";
 
 const AuthPage = ({ mode, onAuth, switchMode }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [org, setOrg] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handle = () => {
+  const handle = async () => {
     if (!email || !password) { setError("Please fill in all required fields."); return; }
     if (mode === "signup" && (!name || !org)) { setError("Please fill in all required fields."); return; }
-    onAuth({ name: name || "Admin", email, org: org || "CareSync Institution", initials: (name || "Admin").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(), role: "Administrator" });
+    
+    setLoading(true);
+    setError("");
+    
+    try {
+      if (mode === "signup") {
+        // Register new user
+        const registerRes = await apiClient.post("/auth/register", {
+          email,
+          password,
+          name,
+          organization: org || "CareSync Institution",
+          role: "Administrator",
+        });
+
+        const { token, user } = registerRes.data.data;
+        if (!token || !user) {
+          throw new Error("Registration response invalid");
+        }
+
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        
+        onAuth({
+          name: user.name || "Admin",
+          email: user.email,
+          org: user.organization || "CareSync Institution",
+          initials: user.name?.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "AD",
+          role: user.role,
+        });
+      } else {
+        // Login existing user
+        const loginRes = await apiClient.post("/auth/login", { email, password });
+        
+        const { token, user } = loginRes.data.data;
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+        
+        onAuth({
+          name: user.name || "Admin",
+          email: user.email,
+          org: user.organization || "CareSync Institution",
+          initials: user.name?.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "AD",
+          role: user.role,
+        });
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Authentication failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -21,7 +74,7 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", background: C.white, borderRadius: 24, overflow: "hidden", boxShadow: "0 24px 80px rgba(0,0,0,0.1)", width: "100%", maxWidth: 900, minHeight: 520 }}>
         <div style={{ background: `linear-gradient(135deg,${C.primary} 0%,${C.primaryDark} 100%)`, padding: 48, display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 40 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>❤️</div>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: C.white }}>CS</div>
             <span style={{ fontSize: 20, fontWeight: 800, color: C.white }}>CareSync</span>
           </div>
           <h2 style={{ color: C.white, fontSize: 28, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.2 }}>Manage care.<br />Stay organized.</h2>
@@ -40,10 +93,30 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {mode === "signup" && (<><Input label="Your Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" required /><Input label="Institution Name" value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Orphanage / NGO name" required /></>)}
             <Input label="Email Address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@institution.org" required />
-            <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+            <div style={{ position: "relative" }}>
+              <Input label="Password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: 40,
+                  padding: "4px 8px",
+                  border: "none",
+                  background: "transparent",
+                  color: C.primary,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
           </div>
-          <button onClick={handle} style={{ marginTop: 24, width: "100%", padding: "13px", background: C.primary, color: C.white, border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-            {mode === "login" ? "Sign In →" : "Create Account →"}
+          <button onClick={handle} disabled={loading} style={{ marginTop: 24, width: "100%", padding: "13px", background: loading ? "#CCC" : C.primary, color: C.white, border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+            {loading ? "Please wait..." : (mode === "login" ? "Sign In →" : "Create Account →")}
           </button>
           <p style={{ textAlign: "center", marginTop: 20, fontSize: 14, color: C.textMid }}>
             {mode === "login" ? "Don't have an account?" : "Already have an account?"} {' '}
