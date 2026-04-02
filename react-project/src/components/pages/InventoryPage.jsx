@@ -9,15 +9,70 @@ import Modal from "../ui/Modal";
 import PageHeader from "../ui/PageHeader";
 import SelectField from "../ui/SelectField";
 import { TH, TD } from "../ui/TableCells";
+import inventoryAPI from "../../api/inventoryService";
 
 const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
   const [tab, setTab] = useState("inventory");
   const [showAddInv, setShowAddInv] = useState(false);
   const [showAddNeed, setShowAddNeed] = useState(false);
+  const [invError, setInvError] = useState("");
+  const [needError, setNeedError] = useState("");
+  const [invLoading, setInvLoading] = useState(false);
+  const [needLoading, setNeedLoading] = useState(false);
   const [invForm, setInvForm] = useState({ item: "", category: "", quantity: "", unit: "", minStock: "", status: "Adequate" });
   const [needForm, setNeedForm] = useState({ item: "", category: "", quantity: "", priority: "Medium", requestedBy: "", dateRequested: "", status: "Pending" });
-  const addInventory = () => { if (!invForm.item) return; setInventory((p) => [...p, { ...invForm, id: p.length + 1, lastUpdated: new Date().toISOString().split("T")[0] }]); setShowAddInv(false); setInvForm({ item: "", category: "", quantity: "", unit: "", minStock: "", status: "Adequate" }); };
-  const addNeed = () => { if (!needForm.item) return; setNeeds((p) => [...p, { ...needForm, id: p.length + 1 }]); setShowAddNeed(false); setNeedForm({ item: "", category: "", quantity: "", priority: "Medium", requestedBy: "", dateRequested: "", status: "Pending" }); };
+  
+  const addInventory = async () => {
+    if (!invForm.item || !invForm.category || !invForm.quantity) {
+      setInvError('Item, category and quantity are required.');
+      return;
+    }
+
+    setInvLoading(true);
+    setInvError("");
+
+    try {
+      // Call backend API using backend field names
+      const response = await inventoryAPI.create({
+        item_name: invForm.item,
+        category: invForm.category,
+        quantity_available: Number(invForm.quantity),
+      });
+      
+      // Add to local state with UI model mapping
+      const newItem = response.data.data;
+      setInventory((p) => [
+        {
+          id: newItem.item_id,
+          item: newItem.item_name,
+          category: newItem.category,
+          quantity: newItem.quantity_available,
+          unit: invForm.unit,
+          minStock: Number(invForm.minStock),
+          status: invForm.status,
+          lastUpdated: newItem.last_updated ? new Date(newItem.last_updated).toISOString().split('T')[0] : "",
+        },
+        ...p,
+      ]);
+      
+      // Clear form and close modal
+      setShowAddInv(false);
+      setInvForm({ item: "", category: "", quantity: "", unit: "", minStock: "", status: "Adequate" });
+    } catch (err) {
+      console.error("Inventory add failed", err);
+      const message = err.response?.data?.message || "Failed to add inventory item. Please try again.";
+      setInvError(message);
+    } finally {
+      setInvLoading(false);
+    }
+  };
+  
+  const addNeed = () => {
+    if (!needForm.item) return;
+    setNeeds((p) => [...p, { ...needForm, id: p.length + 1 }]);
+    setShowAddNeed(false);
+    setNeedForm({ item: "", category: "", quantity: "", priority: "Medium", requestedBy: "", dateRequested: "", status: "Pending" });
+  };
 
   return (
     <div style={{ padding: 32 }}>
@@ -72,6 +127,7 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
 
       {showAddInv && (
         <Modal title="Add Inventory Item" onClose={() => setShowAddInv(false)}>
+          {invError && <div style={{ background: "#FEF2F2", color: C.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{invError}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <Input label="Item Name" value={invForm.item} onChange={(e) => setInvForm({ ...invForm, item: e.target.value })} placeholder="Item name" required />
             <SelectField label="Category" value={invForm.category} onChange={(e) => setInvForm({ ...invForm, category: e.target.value })} options={["Clothing", "Bedding", "Stationery", "Food", "Hygiene", "Medical", "Furniture", "Electronics", "Other"]} required />
@@ -82,13 +138,14 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
             <Btn label="Cancel" variant="ghost" onClick={() => setShowAddInv(false)} />
-            <Btn label="Add Item" onClick={addInventory} />
+            <Btn label={invLoading ? "Adding..." : "Add Item"} onClick={addInventory} disabled={invLoading} />
           </div>
         </Modal>
       )}
 
       {showAddNeed && (
         <Modal title="Add Need / Request" onClose={() => setShowAddNeed(false)}>
+          {needError && <div style={{ background: "#FEF2F2", color: C.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{needError}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <Input label="Item / Need" value={needForm.item} onChange={(e) => setNeedForm({ ...needForm, item: e.target.value })} placeholder="What is needed?" required />
             <SelectField label="Category" value={needForm.category} onChange={(e) => setNeedForm({ ...needForm, category: e.target.value })} options={["Clothing", "Education", "Medical", "Food", "Hygiene", "Furniture", "Electronics", "Other"]} />
@@ -99,7 +156,7 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
             <Btn label="Cancel" variant="ghost" onClick={() => setShowAddNeed(false)} />
-            <Btn label="Submit Request" onClick={addNeed} />
+            <Btn label={needLoading ? "Submitting..." : "Submit Request"} onClick={addNeed} disabled={needLoading} />
           </div>
         </Modal>
       )}

@@ -11,9 +11,11 @@ const SelectField = ({ label, value, onChange, options, required }) => (
       onBlur={(e) => (e.target.style.borderColor = C.border)}
     >
       <option value="">Select...</option>
-      {options.map((o) => (
-        <option key={o} value={o}>{o}</option>
-      ))}
+      {options.map((o) => {
+        const value = typeof o === 'string' ? o : o.value;
+        const label = typeof o === 'string' ? o : o.label;
+        return <option key={value} value={value}>{label}</option>;
+      })}
     </select>
   </div>
 );

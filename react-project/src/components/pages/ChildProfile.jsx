@@ -38,28 +38,6 @@ const ChildProfile = ({ child, goBack }) => {
               ))}
             </div>
           </Card>
-          <Card>
-            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: C.text }}>Academic Progress</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-              {[["Mathematics", "85%"], ["Science", "78%"], ["English", "92%"], ["Social Studies", "80%"], ["Art", "95%"],].map(([s, g]) => (
-                <div key={s} style={{ padding: "12px 14px", background: C.bg, borderRadius: 10 }}>
-                  <div style={{ fontSize: 12, color: C.textMid, fontWeight: 600 }}>{s}</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: C.primary, marginTop: 4 }}>{g}</div>
-                </div>
-              ))}
-            </div>
-          </Card>
-          <Card>
-            <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: C.text }}>Attendance Overview</h3>
-            <div style={{ display: "flex", gap: 16 }}>
-              {[["Days Present", "142", C.success], ["Days Absent", "8", C.danger], ["Attendance Rate", "94.7%", C.primary]].map(([l, v, c]) => (
-                <div key={l} style={{ flex: 1, padding: 16, background: c + "12", borderRadius: 12, textAlign: "center" }}>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: c }}>{v}</div>
-                  <div style={{ fontSize: 12, color: C.textMid, marginTop: 4 }}>{l}</div>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
       </div>
     </div>

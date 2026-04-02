@@ -14,7 +14,23 @@ const Sidebar = ({ active, setPage, onLogout }) => (
   <aside style={{ width: 240, background: C.white, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0 }}>
     <div style={{ padding: "24px 24px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>❤️</div>
+        <div style={{
+          width: 34,
+          height: 34,
+          borderRadius: 10,
+          background: C.primary,
+          color: "white",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 16,
+          fontWeight: 800,
+          fontFamily: "'DM Sans', 'Segoe UI', system-ui, sans-serif",
+          boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+          textTransform: "uppercase"
+        }}>
+          CS
+        </div>
         <div>
           <div style={{ fontSize: 17, fontWeight: 800, color: C.text, letterSpacing: -0.5 }}>Care<span style={{ color: C.primary }}>Sync</span></div>
           <div style={{ fontSize: 10, color: C.textLight }}>Record Management</div>
