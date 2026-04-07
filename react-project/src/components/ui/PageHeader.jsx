@@ -1,10 +1,10 @@
 import C from "../../constants/colors";
 
 const PageHeader = ({ title, subtitle, action }) => (
-  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
     <div>
-      <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: C.text }}>{title}</h2>
-      {subtitle && <p style={{ margin: "4px 0 0", fontSize: 14, color: C.textMid }}>{subtitle}</p>}
+      <h2 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: C.text, letterSpacing: -0.5, fontFamily: "'Inter', 'DM Sans', 'Segoe UI', system-ui, sans-serif" }}>{title}</h2>
+      {subtitle && <p style={{ margin: "6px 0 0", fontSize: 15, color: C.textMid, fontWeight: 400 }}>{subtitle}</p>}
     </div>
     {action}
   </div>

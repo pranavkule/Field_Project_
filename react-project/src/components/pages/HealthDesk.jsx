@@ -11,6 +11,7 @@ import { TH, TD } from "../ui/TableCells";
 import SelectField from "../ui/SelectField";
 import { SAMPLE_HEALTH } from "../../constants/data";
 import healthAPI from "../../api/healthService";
+import { Heart, Clock, CheckCircle, Plus } from "lucide-react";
 
 const HealthDesk = ({ children, needs, setNeeds }) => {
   const [records, setRecords] = useState(needs || []);
@@ -76,11 +77,13 @@ const HealthDesk = ({ children, needs, setNeeds }) => {
 
   return (
     <div style={{ padding: 32 }}>
-      <PageHeader title="Health Desk" subtitle="Medical records and health tracking" action={<Btn label="Add Record" icon="+" onClick={() => setShowAdd(true)} />} />
+      <PageHeader title="Health Desk" subtitle="Medical records and health tracking" action={<Btn label="Add Record" icon={<Plus size={16} />} onClick={() => setShowAdd(true)} />} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 24 }}>
-        {[["Total Records", filteredRecords.length, C.primary, "🏥"], ["Pending Follow-ups", filteredRecords.filter((r) => r.status === "Pending Treatment").length, C.warning, "⏳"], ["Resolved Cases", filteredRecords.filter((r) => r.status === "Resolved" || r.status === "Completed").length, C.success, "✅"]].map(([l, v, c, icon]) => (
-          <Card key={l} style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: c + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{icon}</div>
+        {[[Heart, "Total Records", filteredRecords.length, C.primary], [Clock, "Pending Follow-ups", filteredRecords.filter((r) => r.status === "Pending Treatment").length, C.warning], [CheckCircle, "Resolved Cases", filteredRecords.filter((r) => r.status === "Resolved" || r.status === "Completed").length, C.success]].map(([Icon, l, v, c]) => (
+          <Card key={l} style={{ display: "flex", alignItems: "center", gap: 14, padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", borderRadius: 16 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: c + "18", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Icon size={22} color={c} />
+            </div>
             <div>
               <div style={{ fontSize: 24, fontWeight: 800, color: C.text }}>{v}</div>
               <div style={{ fontSize: 13, color: C.textMid }}>{l}</div>

@@ -213,9 +213,9 @@ export default function App() {
   };
 
   return (
-    <div style={{ fontFamily: "'DM Sans','Segoe UI',system-ui,sans-serif", display: 'flex', minHeight: '100vh', background: C.bg }}>
+    <div style={{ fontFamily: "'Inter', 'DM Sans','Segoe UI',system-ui,sans-serif", display: 'flex', minHeight: '100vh', background: C.bg, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.02)' }}>
       <Sidebar active={page} setPage={(p) => { setPage(p); setSelectedChild(null); }} onLogout={handleLogout} />
-      <main style={{ flex: 1, overflowY: 'auto', minHeight: '100vh' }}>
+      <main style={{ flex: 1, overflowY: 'auto', minHeight: '100vh', background: 'linear-gradient(135deg, #ffffff 0%, #fafbfc 100%)' }}>
         <Topbar user={user} />
         {renderPage()}
       </main>

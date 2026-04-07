@@ -26,7 +26,7 @@ const Sidebar = ({ active, setPage, onLogout }) => (
           justifyContent: "center",
           fontSize: 16,
           fontWeight: 800,
-          fontFamily: "'DM Sans', 'Segoe UI', system-ui, sans-serif",
+          fontFamily: "'Inter', 'DM Sans', 'Segoe UI', system-ui, sans-serif",
           boxShadow: "0 4px 12px rgba(36, 107, 253, 0.3)",
           textTransform: "uppercase"
         }}>

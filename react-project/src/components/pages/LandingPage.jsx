@@ -1,6 +1,7 @@
 import C from "../../constants/colors";
 import Btn from "../ui/Btn";
 import Card from "../ui/Card";
+import { Users, UserCheck, DollarSign, Package, Heart, ClipboardList, Briefcase, Sparkles } from "lucide-react";
 
 const LandingPage = ({ onLogin, onSignup }) => (
   <div style={{ minHeight: "100vh", background: C.white, fontFamily: "inherit" }}>
@@ -17,7 +18,7 @@ const LandingPage = ({ onLogin, onSignup }) => (
     <div style={{ padding: "80px 60px 60px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center", maxWidth: 1200, margin: "0 auto" }}>
       <div>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", background: C.primaryLight, borderRadius: 20, marginBottom: 24 }}>
-          <span style={{ fontSize: 14 }}>✨</span>
+          <Sparkles size={14} color={C.primary} />
           <span style={{ fontSize: 13, color: C.primary, fontWeight: 600 }}>Built for Child Care Institutions</span>
         </div>
         <h1 style={{ fontSize: 52, fontWeight: 900, color: C.text, margin: "0 0 16px", lineHeight: 1.1, letterSpacing: -1.5 }}>Manage care.<br /><span style={{ color: C.primary }}>Stay organized.</span></h1>
@@ -36,9 +37,12 @@ const LandingPage = ({ onLogin, onSignup }) => (
         </div>
         <div style={{ padding: 20 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-            {[["👦 Children", "24", C.primary], ["👥 Staff", "12", "#8B5CF6"], ["💰 Expenses", "₹1.2L", C.success], ["📦 Inventory", "48", C.warning]].map(([l, v, c]) => (
-              <div key={l} style={{ background: C.white, borderRadius: 12, padding: "12px 14px", border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 11, color: C.textLight }}>{l}</div>
+            {[[Users, "Children", "24", C.primary], [UserCheck, "Staff", "12", "#8B5CF6"], [DollarSign, "Expenses", "₹1.2L", C.success], [Package, "Inventory", "48", C.warning]].map(([Icon, l, v, c]) => (
+              <div key={l} style={{ background: C.white, borderRadius: 12, padding: "12px 14px", border: `1px solid ${C.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.textLight }}>
+                  <Icon size={12} />
+                  {l}
+                </div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: c, marginTop: 4 }}>{v}</div>
               </div>
             ))}
@@ -59,9 +63,11 @@ const LandingPage = ({ onLogin, onSignup }) => (
           <p style={{ fontSize: 16, color: C.textMid }}>All the tools you need to run a child care institution efficiently</p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
-          {[ ["👦", "Child Directory", "Complete profiles for every resident with health plans, academic progress, and attendance."], ["🏥", "Health Desk", "Log medical visits, vaccinations, maintain health history and follow-up schedules."], ["📋", "Attendance Tracker", "Daily attendance with calendar view and reports. Know who's present at all times."], ["👥", "Staff Directory", "Track your team — roles, departments, contact info — in a single organized directory."], ["📦", "Inventory & Needs", "Track stock levels and submit needs requests. Never run out of essentials."], ["💰", "Expense Tracker", "Full expense tracking with categories. Maintain complete financial transparency."]].map(([icon, title, desc]) => (
-            <Card key={title}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 14 }}>{icon}</div>
+          {[ [Users, "Child Directory", "Complete profiles for every resident with health plans, academic progress, and attendance."], [Heart, "Health Desk", "Log medical visits, vaccinations, maintain health history and follow-up schedules."], [ClipboardList, "Attendance Tracker", "Daily attendance with calendar view and reports. Know who's present at all times."], [UserCheck, "Staff Directory", "Track your team — roles, departments, contact info — in a single organized directory."], [Package, "Inventory & Needs", "Track stock levels and submit needs requests. Never run out of essentials."], [DollarSign, "Expense Tracker", "Full expense tracking with categories. Maintain complete financial transparency."]].map(([Icon, title, desc]) => (
+            <Card key={title} style={{ padding: "24px", boxShadow: "0 4px 12px rgba(0,0,0,0.06)", borderRadius: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                <Icon size={24} color={C.primary} />
+              </div>
               <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: C.text }}>{title}</h3>
               <p style={{ margin: 0, fontSize: 14, color: C.textMid, lineHeight: 1.6 }}>{desc}</p>
             </Card>

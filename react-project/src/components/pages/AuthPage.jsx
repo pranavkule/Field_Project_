@@ -14,9 +14,10 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
   const [loading, setLoading] = useState(false);
 
   const handle = async () => {
-    if (!email || !password) { setError("Please fill in all required fields."); return; }
-    if (mode === "signup" && (!name || !org)) { setError("Please fill in all required fields."); return; }
-    
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) { setError("Please fill in all required fields."); return; }
+    if (mode === "signup" && (!name.trim() || !org.trim())) { setError("Please fill in all required fields."); return; }
+
     setLoading(true);
     setError("");
     
@@ -24,7 +25,7 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
       if (mode === "signup") {
         // Register new user
         const registerRes = await apiClient.post("/auth/register", {
-          email,
+          email: normalizedEmail,
           password,
           name,
           organization: org || "CareSync Institution",
@@ -48,7 +49,7 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
         });
       } else {
         // Login existing user
-        const loginRes = await apiClient.post("/auth/login", { email, password });
+        const loginRes = await apiClient.post("/auth/login", { email: normalizedEmail, password });
         
         const { token, user } = loginRes.data.data;
         localStorage.setItem("token", token);
@@ -63,7 +64,12 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
         });
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Authentication failed. Please try again.");
+      console.error('Auth request failed', err);
+      setError(
+        err.response?.data?.message ||
+        err.message ||
+        "Authentication failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }

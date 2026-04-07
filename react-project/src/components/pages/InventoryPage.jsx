@@ -10,6 +10,7 @@ import PageHeader from "../ui/PageHeader";
 import SelectField from "../ui/SelectField";
 import { TH, TD } from "../ui/TableCells";
 import inventoryAPI from "../../api/inventoryService";
+import { Package, ClipboardList, Plus } from "lucide-react";
 
 const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
   const [tab, setTab] = useState("inventory");
@@ -78,11 +79,11 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
     <div style={{ padding: 32 }}>
       <PageHeader
         title="Inventory & Needs"
-        action={<div style={{ display: "flex", gap: 10 }}><Btn label="Add Item" icon="+" onClick={() => setShowAddInv(true)} variant="outline" /><Btn label="Add Need" icon="📋" onClick={() => setShowAddNeed(true)} /></div>}
+        action={<div style={{ display: "flex", gap: 10 }}><Btn label="Add Item" icon={<Plus size={16} />} onClick={() => setShowAddInv(true)} variant="outline" /><Btn label="Add Need" icon={<ClipboardList size={16} />} onClick={() => setShowAddNeed(true)} /></div>}
       />
-      <div style={{ display: "flex", gap: 4, marginBottom: 20, background: C.bg, borderRadius: 12, padding: 4, width: "fit-content" }}>
-        {[ ["inventory", "📦 Inventory"], ["needs", "📋 Needs & Requests"]].map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{ padding: "9px 20px", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, fontFamily: "inherit", background: tab === id ? C.white : "transparent", color: tab === id ? C.primary : C.textMid, boxShadow: tab === id ? "0 1px 4px rgba(0,0,0,0.08)" : "none" }}>{label}</button>
+      <div style={{ display: "flex", gap: 4, marginBottom: 20, background: C.bg, borderRadius: 12, padding: 4, width: "fit-content", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.04)" }}>
+        {[ ["inventory", <><Package size={16} /> Inventory</>], ["needs", <><ClipboardList size={16} /> Needs & Requests</>]].map(([id, label]) => (
+          <button key={id} onClick={() => setTab(id)} style={{ padding: "9px 20px", borderRadius: 10, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, fontFamily: "inherit", background: tab === id ? C.white : "transparent", color: tab === id ? C.primary : C.textMid, boxShadow: tab === id ? "0 1px 4px rgba(0,0,0,0.08)" : "none", transition: "all 0.2s ease", display: "flex", alignItems: "center", gap: "8px" }}>{label}</button>
         ))}
       </div>
       {tab === "inventory" && (

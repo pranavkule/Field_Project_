@@ -4,14 +4,27 @@ const prisma = require('../config/db');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 
+const normalizeEmail = (email) => {
+  if (typeof email !== 'string') return '';
+  return email.trim().toLowerCase();
+};
+
 const register = async (req, res, next) => {
-  const { name, email, password, role } = req.body;
+  const { name, email: rawEmail, password, role } = req.body;
+  const email = normalizeEmail(rawEmail);
 
   if (!name || !email || !password || !role) {
-    return next(new ApiError(400, 'name, email, password and role are required')); 
+    return next(new ApiError(400, 'name, email, password and role are required'));
   }
 
-  const existingUser = await prisma.user.findUnique({ where: { email } });
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      email: {
+        equals: email,
+        mode: 'insensitive'
+      }
+    }
+  });
   if (existingUser) {
     return next(new ApiError(409, 'Email already in use'));
   }
@@ -45,21 +58,35 @@ const register = async (req, res, next) => {
 };
 
 const login = async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email: rawEmail, password } = req.body;
+  const email = normalizeEmail(rawEmail);
+
+  console.log('[auth] login attempt:', email);
 
   if (!email || !password) {
     return next(new ApiError(400, 'email and password are required'));
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: {
+      email: {
+        equals: email,
+        mode: 'insensitive'
+      }
+    }
+  });
   if (!user) {
+    console.log('[auth] login failed - user not found:', email);
     return next(new ApiError(401, 'Invalid credentials'));
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password_hash);
   if (!isPasswordValid) {
+    console.log('[auth] login failed - invalid password for:', email);
     return next(new ApiError(401, 'Invalid credentials'));
   }
+
+  console.log('[auth] login success:', email, 'user_id=', user.user_id);
 
   const token = jwt.sign(
     { user_id: user.user_id, role: user.role, name: user.name, email: user.email },

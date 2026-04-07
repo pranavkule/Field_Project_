@@ -10,6 +10,7 @@ import SearchBar from "../ui/SearchBar";
 import SelectField from "../ui/SelectField";
 import { TH, TD } from "../ui/TableCells";
 import expenseAPI from "../../api/expenseService";
+import { Utensils, Zap, BookOpen, Pill, CreditCard, Wrench, AlertTriangle, Plus } from "lucide-react";
 
 const ExpensesPage = ({ expenses, setExpenses }) => {
   const [showAdd, setShowAdd] = useState(false);
@@ -61,11 +62,18 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
       setLoading(false);
     }
   };
-  const catIcons = { Food: "🍽️", Utilities: "💡", Education: "📚", Medical: "💊", Salaries: "💳", Maintenance: "🔧" };
+  const catIcons = { 
+    Food: Utensils, 
+    Utilities: Zap, 
+    Education: BookOpen, 
+    Medical: Pill, 
+    Salaries: CreditCard, 
+    Maintenance: Wrench 
+  };
 
   return (
     <div style={{ padding: 32 }}>
-      <PageHeader title="Expense Tracker" subtitle="Financial records and budget management" action={<Btn label="Add Expense" icon="+" onClick={() => setShowAdd(true)} />} />
+      <PageHeader title="Expense Tracker" subtitle="Financial records and budget management" action={<Btn label="Add Expense" icon={<Plus size={16} />} onClick={() => setShowAdd(true)} />} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20, marginBottom: 24 }}>
         <Card>
           <div style={{ textAlign: "center" }}>
@@ -77,20 +85,25 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
         <Card>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 14 }}>Breakdown by Category</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {Object.entries(catTotals).map(([cat, amt]) => (
-              <div key={cat} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 16 }}>{catIcons[cat] || "📌"}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{cat}</span>
-                    <span style={{ fontSize: 13, color: C.textMid }}>₹{amt.toLocaleString()}</span>
+            {Object.entries(catTotals).map(([cat, amt]) => {
+              const Icon = catIcons[cat] || AlertTriangle;
+              return (
+                <div key={cat} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon size={16} color={C.primary} />
                   </div>
-                  <div style={{ height: 6, background: C.bg, borderRadius: 4 }}>
-                    <div style={{ height: "100%", width: `${(amt / total) * 100}%`, background: C.primary, borderRadius: 4 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{cat}</span>
+                      <span style={{ fontSize: 13, color: C.textMid }}>₹{amt.toLocaleString()}</span>
+                    </div>
+                    <div style={{ height: 6, background: C.bg, borderRadius: 4 }}>
+                      <div style={{ height: "100%", width: `${(amt / total) * 100}%`, background: C.primary, borderRadius: 4 }} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       </div>
@@ -106,7 +119,15 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
               <tr key={e.id} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#FAFBFC" }}>
                 <TD style={{ color: C.textMid, fontSize: 13 }}>{e.date}</TD>
                 <TD style={{ fontWeight: 600 }}>{e.description}</TD>
-                <TD style={{ color: C.textMid, fontSize: 13 }}>{catIcons[e.category] || "📌"} {e.category}</TD>
+                <TD style={{ color: C.textMid, fontSize: 13 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {(() => {
+                      const Icon = catIcons[e.category] || AlertTriangle;
+                      return <Icon size={14} color={C.textMid} />;
+                    })()}
+                    {e.category}
+                  </div>
+                </TD>
                 <TD style={{ fontWeight: 700, fontSize: 15 }}>₹{Number(e.amount).toLocaleString()}</TD>
                 <TD style={{ color: C.textMid, fontSize: 13 }}>{e.paymentMode}</TD>
                 <TD><span style={{ padding: "3px 10px", background: C.bg, borderRadius: 6, fontSize: 12, fontWeight: 600, color: C.textMid }}>{e.receipt}</span></TD>
