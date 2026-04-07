@@ -1,17 +1,18 @@
 import C from "../../constants/colors";
+import { LayoutDashboard, Users, UserCheck, Heart, ClipboardList, Package, DollarSign, LogOut } from "lucide-react";
 
 const NAV = [
-  { id: "dashboard", label: "Dashboard", icon: "⊞" },
-  { id: "children", label: "Child Directory", icon: "👦" },
-  { id: "staff", label: "Staff Directory", icon: "👥" },
-  { id: "health", label: "Health Desk", icon: "🏥" },
-  { id: "attendance", label: "Staff Attendance", icon: "📋" },
-  { id: "inventory", label: "Inventory & Needs", icon: "📦" },
-  { id: "expenses", label: "Expense Tracker", icon: "💰" },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "children", label: "Child Directory", icon: Users },
+  { id: "staff", label: "Staff Directory", icon: UserCheck },
+  { id: "health", label: "Health Desk", icon: Heart },
+  { id: "attendance", label: "Staff Attendance", icon: ClipboardList },
+  { id: "inventory", label: "Inventory & Needs", icon: Package },
+  { id: "expenses", label: "Expense Tracker", icon: DollarSign },
 ];
 
 const Sidebar = ({ active, setPage, onLogout }) => (
-  <aside style={{ width: 240, background: C.white, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0 }}>
+  <aside style={{ width: 240, background: C.white, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0, boxShadow: "2px 0 8px rgba(0,0,0,0.05)" }}>
     <div style={{ padding: "24px 24px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{
@@ -26,7 +27,7 @@ const Sidebar = ({ active, setPage, onLogout }) => (
           fontSize: 16,
           fontWeight: 800,
           fontFamily: "'DM Sans', 'Segoe UI', system-ui, sans-serif",
-          boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+          boxShadow: "0 4px 12px rgba(36, 107, 253, 0.3)",
           textTransform: "uppercase"
         }}>
           CS
@@ -42,9 +43,9 @@ const Sidebar = ({ active, setPage, onLogout }) => (
         <button
           key={n.id}
           onClick={() => setPage(n.id)}
-          style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderRadius: 12, border: "none", cursor: "pointer", marginBottom: 2, textAlign: "left", fontSize: 14, fontWeight: active === n.id ? 700 : 500, background: active === n.id ? C.primaryLight : "transparent", color: active === n.id ? C.primary : C.textMid, fontFamily: "inherit" }}
+          style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderRadius: 12, border: "none", cursor: "pointer", marginBottom: 2, textAlign: "left", fontSize: 14, fontWeight: active === n.id ? 700 : 500, background: active === n.id ? C.primaryLight : "transparent", color: active === n.id ? C.primary : C.textMid, fontFamily: "inherit", transition: "all 0.2s ease" }}
         >
-          <span style={{ fontSize: 17 }}>{n.icon}</span>
+          <n.icon size={17} />
           {n.label}
         </button>
       ))}
@@ -52,9 +53,10 @@ const Sidebar = ({ active, setPage, onLogout }) => (
     <div style={{ padding: 14, borderTop: `1px solid ${C.border}` }}>
       <button
         onClick={onLogout}
-        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, color: C.danger, background: "#FEF2F2", fontFamily: "inherit" }}
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderRadius: 12, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 500, color: C.danger, background: "#FEF2F2", fontFamily: "inherit", transition: "all 0.2s ease" }}
       >
-        <span style={{ fontSize: 17 }}>🚪</span> Logout
+        <LogOut size={17} />
+        Logout
       </button>
     </div>
   </aside>

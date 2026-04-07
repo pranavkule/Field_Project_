@@ -3,17 +3,25 @@ import { statusColor } from "../../utils/statusColor";
 import Card from "../ui/Card";
 import Avatar from "../ui/Avatar";
 import Badge from "../ui/Badge";
+import { Users, UserCheck, DollarSign, Package, UserPlus, Briefcase, AlertTriangle, CheckCircle, Heart, Utensils, Zap, BookOpen, Pill, CreditCard, Wrench } from "lucide-react";
 
 const Dashboard = ({ setPage, children, staff, expenses, inventory }) => {
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const lowStock = inventory.filter(i => i.status === "Low Stock" || i.status === "Critical").length;
   const stats = [
-    { label: "Children in Care", value: children.length, icon: "👦", color: C.primary, sub: "Active residents", page: "children" },
-    { label: "Total Staff", value: staff.length, icon: "👥", color: "#8B5CF6", sub: "All departments", page: "staff" },
-    { label: "Monthly Expenses", value: `₹${totalExpenses.toLocaleString()}`, icon: "💰", color: C.success, sub: "Total expenditure", page: "expenses" },
-    { label: "Low Stock Items", value: lowStock, icon: "📦", color: C.warning, sub: "Need restocking", page: "inventory" },
+    { label: "Children in Care", value: children.length, icon: Users, color: C.primary, sub: "Active residents", page: "children" },
+    { label: "Total Staff", value: staff.length, icon: UserCheck, color: "#8B5CF6", sub: "All departments", page: "staff" },
+    { label: "Monthly Expenses", value: `₹${totalExpenses.toLocaleString()}`, icon: DollarSign, color: C.success, sub: "Total expenditure", page: "expenses" },
+    { label: "Low Stock Items", value: lowStock, icon: Package, color: C.warning, sub: "Need restocking", page: "inventory" },
   ];
-  const catIcons = { Food: "🍽️", Utilities: "💡", Education: "📚", Medical: "💊", Salaries: "💳", Maintenance: "🔧" };
+  const catIcons = { 
+    Food: Utensils, 
+    Utilities: Zap, 
+    Education: BookOpen, 
+    Medical: Pill, 
+    Salaries: CreditCard, 
+    Maintenance: Wrench 
+  };
   return (
     <div style={{ padding: 32 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
@@ -25,7 +33,9 @@ const Dashboard = ({ setPage, children, staff, expenses, inventory }) => {
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.textMid, marginTop: 6 }}>{s.label}</div>
                 <div style={{ fontSize: 12, color: C.textLight, marginTop: 3 }}>{s.sub}</div>
               </div>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: s.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{s.icon}</div>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: s.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+                <s.icon size={22} color={s.color} />
+              </div>
             </div>
           </Card>
         ))}
@@ -35,13 +45,14 @@ const Dashboard = ({ setPage, children, staff, expenses, inventory }) => {
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: C.text }}>Quick Actions</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[
-              { label: "Add Resident", icon: "👦", page: "children" },
-              { label: "Add Staff", icon: "👥", page: "staff" },
-              { label: "Log Expense", icon: "💰", page: "expenses" },
-              { label: "Update Inventory", icon: "📦", page: "inventory" },
+              { label: "Add Resident", icon: UserPlus, page: "children" },
+              { label: "Add Staff", icon: Briefcase, page: "staff" },
+              { label: "Log Expense", icon: DollarSign, page: "expenses" },
+              { label: "Update Inventory", icon: Package, page: "inventory" },
             ].map((a) => (
-              <button key={a.label} onClick={() => setPage(a.page)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: C.primaryLight, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 13, fontWeight: 600, color: C.primary, fontFamily: "inherit" }}>
-                <span style={{ fontSize: 20 }}>{a.icon}</span>{a.label}
+              <button key={a.label} onClick={() => setPage(a.page)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: C.primaryLight, border: "none", borderRadius: 12, cursor: "pointer", fontSize: 13, fontWeight: 600, color: C.primary, fontFamily: "inherit", transition: "all 0.2s ease", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
+                <a.icon size={18} />
+                {a.label}
               </button>
             ))}
           </div>
@@ -50,19 +61,19 @@ const Dashboard = ({ setPage, children, staff, expenses, inventory }) => {
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: C.text }}>Alerts & Reminders</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {inventory.filter((i) => i.status === "Critical").map((i) => (
-              <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#FEF2F2", borderRadius: 10, borderLeft: `3px solid ${C.danger}` }}>
-                <span>🔴</span>
+              <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "#FEF2F2", borderRadius: 14, borderLeft: `3px solid ${C.danger}`, boxShadow: "inset 0 0 0 1px rgba(239, 68, 68, 0.12)" }}>
+                <AlertTriangle size={18} color={C.danger} />
                 <div style={{ fontSize: 13, color: C.text }}><b>{i.item}</b> — Critical ({i.quantity} {i.unit})</div>
               </div>
             ))}
             {inventory.filter((i) => i.status === "Low Stock").map((i) => (
-              <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#FFFBEB", borderRadius: 10, borderLeft: `3px solid ${C.warning}` }}>
-                <span>🟡</span>
+              <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "#FFFBEB", borderRadius: 14, borderLeft: `3px solid ${C.warning}`, boxShadow: "inset 0 0 0 1px rgba(245, 158, 11, 0.12)" }}>
+                <AlertTriangle size={18} color={C.warning} />
                 <div style={{ fontSize: 13, color: C.text }}><b>{i.item}</b> — Low stock ({i.quantity} {i.unit})</div>
               </div>
             ))}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#F0FDF4", borderRadius: 10, borderLeft: `3px solid ${C.success}` }}>
-              <span>🟢</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "#F0FDF4", borderRadius: 14, borderLeft: `3px solid ${C.success}`, boxShadow: "inset 0 0 0 1px rgba(16, 185, 129, 0.12)" }}>
+              <CheckCircle size={18} color={C.success} />
               <div style={{ fontSize: 13, color: C.text }}>{children.length} children currently in care</div>
             </div>
           </div>
@@ -85,18 +96,23 @@ const Dashboard = ({ setPage, children, staff, expenses, inventory }) => {
         <Card>
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700, color: C.text }}>Recent Expenses</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {expenses.slice(0, 4).map((e) => (
-              <div key={e.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{catIcons[e.category] || "📌"}</div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{e.description}</div>
-                    <div style={{ fontSize: 12, color: C.textLight }}>{e.date}</div>
+            {expenses.slice(0, 4).map((e) => {
+              const Icon = catIcons[e.category] || AlertTriangle;
+              return (
+                <div key={e.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 14, background: C.primaryLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Icon size={18} color={C.primary} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{e.description}</div>
+                      <div style={{ fontSize: 12, color: C.textLight }}>{e.date}</div>
+                    </div>
                   </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>₹{e.amount.toLocaleString()}</div>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>₹{e.amount.toLocaleString()}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
       </div>
