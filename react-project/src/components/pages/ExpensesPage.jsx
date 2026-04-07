@@ -12,8 +12,10 @@ import { TH, TD } from "../ui/TableCells";
 import expenseAPI from "../../api/expenseService";
 import { Utensils, Zap, BookOpen, Pill, CreditCard, Wrench, AlertTriangle, Plus } from "lucide-react";
 
-const ExpensesPage = ({ expenses, setExpenses }) => {
+const ExpensesPage = ({ expenses, setExpenses, user }) => {
+  const isAdmin = (user?.role || "").toLowerCase() === "admin";
   const [showAdd, setShowAdd] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(null);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,6 +23,32 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
   const filtered = expenses.filter((e) => e.description.toLowerCase().includes(search.toLowerCase()) || e.category.toLowerCase().includes(search.toLowerCase()));
   const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
   const catTotals = expenses.reduce((acc, e) => { acc[e.category] = (acc[e.category] || 0) + Number(e.amount); return acc; }, {});
+
+  const resetForm = () => {
+    setShowAdd(false);
+    setEditingExpense(null);
+    setForm({ date: "", description: "", category: "", amount: "", paymentMode: "Cash", receipt: "" });
+    setError("");
+  };
+
+  const openExpenseForm = (expense = null) => {
+    if (expense) {
+      setEditingExpense(expense);
+      setForm({
+        date: expense.date || "",
+        description: expense.description || "",
+        category: expense.category || "",
+        amount: expense.amount?.toString?.() || String(expense.amount || ""),
+        paymentMode: expense.paymentMode || "Cash",
+        receipt: expense.receipt || "",
+      });
+    } else {
+      setEditingExpense(null);
+      setForm({ date: "", description: "", category: "", amount: "", paymentMode: "Cash", receipt: "" });
+    }
+    setError("");
+    setShowAdd(true);
+  };
   
   const handleAdd = async () => {
     if (!form.description || !form.amount) return;
@@ -29,35 +57,46 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
     setError("");
     
     try {
-      // Call backend API using backend field names
-      const response = await expenseAPI.create({
+      const payload = {
         expense_category: form.category || "Miscellaneous",
         description: form.description,
         amount: Number(form.amount),
         expense_date: form.date ? new Date(form.date).toISOString() : new Date().toISOString(),
         payment_mode: form.paymentMode,
-      });
-      
-      // Add to local state using UI-friendly structure
-      const newExpense = response.data.data;
-      setExpenses((p) => [
-        {
-          id: newExpense.expense_id,
-          date: newExpense.expense_date ? new Date(newExpense.expense_date).toISOString().split('T')[0] : "",
-          description: newExpense.description,
-          category: newExpense.expense_category,
-          amount: newExpense.amount,
-          paymentMode: newExpense.payment_mode,
-          receipt: form.receipt || "",
-        },
-        ...p,
-      ]);
-      
-      // Clear form and close modal
-      setShowAdd(false);
-      setForm({ date: "", description: "", category: "", amount: "", paymentMode: "Cash", receipt: "" });
+      };
+
+      if (editingExpense) {
+        const response = await expenseAPI.update(editingExpense.id, payload);
+        const updatedExpense = response.data.data;
+        setExpenses((current) => current.map((item) => item.id === editingExpense.id ? {
+          ...item,
+          date: updatedExpense.expense_date ? new Date(updatedExpense.expense_date).toISOString().split('T')[0] : form.date,
+          description: updatedExpense.description,
+          category: updatedExpense.expense_category,
+          amount: updatedExpense.amount,
+          paymentMode: updatedExpense.payment_mode,
+          receipt: form.receipt || item.receipt,
+        } : item));
+      } else {
+        const response = await expenseAPI.create(payload);
+        const newExpense = response.data.data;
+        setExpenses((p) => [
+          {
+            id: newExpense.expense_id,
+            date: newExpense.expense_date ? new Date(newExpense.expense_date).toISOString().split('T')[0] : "",
+            description: newExpense.description,
+            category: newExpense.expense_category,
+            amount: newExpense.amount,
+            paymentMode: newExpense.payment_mode,
+            receipt: form.receipt || "",
+          },
+          ...p,
+        ]);
+      }
+
+      resetForm();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to add expense. Please try again.");
+      setError(err.response?.data?.message || "Failed to save expense. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -73,7 +112,7 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
 
   return (
     <div style={{ padding: 32 }}>
-      <PageHeader title="Expense Tracker" subtitle="Financial records and budget management" action={<Btn label="Add Expense" icon={<Plus size={16} />} onClick={() => setShowAdd(true)} />} />
+      <PageHeader title="Expense Tracker" subtitle="Financial records and budget management" action={isAdmin ? <Btn label="Add Expense" icon={<Plus size={16} />} onClick={() => openExpenseForm()} /> : null} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20, marginBottom: 24 }}>
         <Card>
           <div style={{ textAlign: "center" }}>
@@ -113,7 +152,7 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
           <div style={{ fontSize: 13, color: C.textMid }}>{filtered.length} records</div>
         </div>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead><tr>{["Date", "Description", "Category", "Amount", "Payment Mode", "Receipt"].map((h) => <TH key={h}>{h}</TH>)}</tr></thead>
+          <thead><tr>{["Date", "Description", "Category", "Amount", "Payment Mode", "Receipt", ...(isAdmin ? [""] : [])].map((h) => <TH key={h || 'actions'}>{h}</TH>)}</tr></thead>
           <tbody>
             {filtered.map((e, i) => (
               <tr key={e.id} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#FAFBFC" }}>
@@ -131,13 +170,14 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
                 <TD style={{ fontWeight: 700, fontSize: 15 }}>₹{Number(e.amount).toLocaleString()}</TD>
                 <TD style={{ color: C.textMid, fontSize: 13 }}>{e.paymentMode}</TD>
                 <TD><span style={{ padding: "3px 10px", background: C.bg, borderRadius: 6, fontSize: 12, fontWeight: 600, color: C.textMid }}>{e.receipt}</span></TD>
+                {isAdmin && <TD style={{ textAlign: "right" }}><button onClick={() => openExpenseForm(e)} style={{ border: `1px solid ${C.primary}`, background: C.primary + '10', color: C.primary, fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>Edit</button></TD>}
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
-      {showAdd && (
-        <Modal title="Add Expense" onClose={() => setShowAdd(false)}>
+      {showAdd && isAdmin && (
+        <Modal title={editingExpense ? "Edit Expense" : "Add Expense"} onClose={resetForm}>
           {error && <div style={{ background: "#FEF2F2", color: C.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{error}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <Input label="Date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
@@ -150,8 +190,8 @@ const ExpensesPage = ({ expenses, setExpenses }) => {
             <Input label="Receipt No. (optional)" value={form.receipt} onChange={(e) => setForm({ ...form, receipt: e.target.value })} placeholder="e.g. RCP-007" />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
-            <Btn label="Cancel" variant="ghost" onClick={() => setShowAdd(false)} />
-            <Btn label={loading ? "Adding..." : "Add Expense"} onClick={handleAdd} disabled={loading} />
+            <Btn label="Cancel" variant="ghost" onClick={resetForm} />
+            <Btn label={loading ? (editingExpense ? "Saving..." : "Adding...") : (editingExpense ? "Save Changes" : "Add Expense")} onClick={handleAdd} disabled={loading} />
           </div>
         </Modal>
       )}

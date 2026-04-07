@@ -7,8 +7,8 @@ const { getAllItems, addItem, updateItem, deleteItem } = require('../controllers
 router.use(authMiddleware);
 
 router.get('/', getAllItems);
-router.post('/', addItem);
-router.put('/:id', updateItem);
-router.delete('/:id', allowRoles('superadmin'), deleteItem);
+router.post('/', allowRoles('admin'), addItem);
+router.put('/:id', allowRoles('admin'), updateItem);
+router.delete('/:id', allowRoles('admin'), deleteItem);
 
 module.exports = router;

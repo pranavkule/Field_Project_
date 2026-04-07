@@ -14,8 +14,8 @@ const registerValidator = [
     .withMessage('password must be at least 6 characters long'),
   body('role')
     .trim()
-    .notEmpty()
-    .withMessage('role is required')
+    .isIn(['admin', 'viewer', 'Administrator', 'superadmin'])
+    .withMessage('role must be admin or viewer')
 ];
 
 module.exports = {

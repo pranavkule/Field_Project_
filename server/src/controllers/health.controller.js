@@ -40,6 +40,41 @@ const logVitals = async (req, res, next) => {
   return res.status(201).json(new ApiResponse(201, newRecord, 'Health record created successfully'));
 };
 
+const updateVitals = async (req, res, next) => {
+  const { id } = req.params;
+  const {
+    child_id,
+    weight,
+    height,
+    temperature,
+    blood_pressure,
+    pulse,
+    medical_notes,
+    record_date
+  } = req.body;
+
+  const existingRecord = await prisma.healthRecord.findUnique({ where: { health_id: id } });
+  if (!existingRecord) {
+    return next(new ApiError(404, 'Health record not found'));
+  }
+
+  const updatedRecord = await prisma.healthRecord.update({
+    where: { health_id: id },
+    data: {
+      ...(child_id !== undefined ? { child_id } : {}),
+      ...(weight !== undefined ? { weight: parseFloat(weight) } : {}),
+      ...(height !== undefined ? { height: parseFloat(height) } : {}),
+      ...(temperature !== undefined ? { temperature: parseFloat(temperature) } : {}),
+      ...(blood_pressure !== undefined ? { blood_pressure } : {}),
+      ...(pulse !== undefined ? { pulse: parseInt(pulse, 10) } : {}),
+      ...(medical_notes !== undefined ? { medical_notes } : {}),
+      ...(record_date !== undefined ? { record_date: new Date(record_date) } : {}),
+    }
+  });
+
+  return res.status(200).json(new ApiResponse(200, updatedRecord, 'Health record updated successfully'));
+};
+
 const getHealthByChild = async (req, res, next) => {
   const { childId } = req.params;
 
@@ -66,6 +101,7 @@ const getAllRecords = async (req, res, next) => {
 
 module.exports = {
   logVitals,
+  updateVitals,
   getHealthByChild,
   getAllRecords
 };

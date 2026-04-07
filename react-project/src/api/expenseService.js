@@ -10,6 +10,9 @@ const expenseAPI = {
   // Add new expense
   create: (data) => apiClient.post('/expenses', data),
 
+  // Update expense
+  update: (id, data) => apiClient.put(`/expenses/${id}`, data),
+
   // Delete expense
   delete: (id) => apiClient.delete(`/expenses/${id}`),
 };

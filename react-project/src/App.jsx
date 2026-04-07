@@ -23,6 +23,13 @@ import inventoryAPI from './api/inventoryService';
 import staffAPI from './api/staffService';
 import apiClient from './api/apiClient';
 
+const normalizeRole = (role) => {
+  const value = typeof role === 'string' ? role.trim().toLowerCase() : '';
+  if (value === 'administrator' || value === 'superadmin') return 'admin';
+  if (value === 'admin' || value === 'viewer') return value;
+  return value;
+};
+
 export default function App() {
   // Initialize user from localStorage if token exists
   const [screen, setScreen] = useState(() => {
@@ -38,7 +45,8 @@ export default function App() {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       try {
-        return JSON.parse(savedUser);
+        const parsedUser = JSON.parse(savedUser);
+        return parsedUser ? { ...parsedUser, role: normalizeRole(parsedUser.role) } : null;
       } catch (e) {
         return null;
       }
@@ -159,7 +167,7 @@ export default function App() {
   }, [user, screen]);
 
   const handleAuth = (u) => {
-    setUser(u);
+    setUser(u ? { ...u, role: normalizeRole(u.role) } : u);
     setScreen('app');
     setPage('dashboard');
   };
@@ -189,24 +197,24 @@ export default function App() {
 
   const renderPage = () => {
     if (page === 'childProfile' && selectedChild) {
-      return <ChildProfile child={selectedChild} goBack={() => setPage('children')} />;
+      return <ChildProfile child={selectedChild} user={user} setChildren={setChildren} setSelectedChild={setSelectedChild} goBack={() => setPage('children')} />;
     }
 
     switch (page) {
       case 'dashboard':
         return <Dashboard setPage={setPage} children={children} staff={staff} expenses={expenses} inventory={inventory} />;
       case 'children':
-        return <ChildDirectory children={children} setChildren={setChildren} setPage={setPage} setSelectedChild={setSelectedChild} />;
+        return <ChildDirectory children={children} setChildren={setChildren} setPage={setPage} setSelectedChild={setSelectedChild} user={user} />;
       case 'staff':
-        return <StaffDirectory staff={staff} setStaff={setStaff} />;
+        return <StaffDirectory staff={staff} setStaff={setStaff} user={user} />;
       case 'health':
-        return <HealthDesk children={children} needs={needs} setNeeds={setNeeds} />;
+        return <HealthDesk children={children} needs={needs} setNeeds={setNeeds} user={user} />;
       case 'attendance':
-        return <AttendancePage staff={staff} />;
+        return <AttendancePage staff={staff} user={user} />;
       case 'inventory':
-        return <InventoryPage inventory={inventory} setInventory={setInventory} needs={needs} setNeeds={setNeeds} />;
+        return <InventoryPage inventory={inventory} setInventory={setInventory} needs={needs} setNeeds={setNeeds} user={user} />;
       case 'expenses':
-        return <ExpensesPage expenses={expenses} setExpenses={setExpenses} />;
+        return <ExpensesPage expenses={expenses} setExpenses={setExpenses} user={user} />;
       default:
         return <Dashboard setPage={setPage} children={children} staff={staff} expenses={expenses} inventory={inventory} />;
     }

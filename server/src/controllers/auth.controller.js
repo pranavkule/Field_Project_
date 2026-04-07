@@ -4,6 +4,13 @@ const prisma = require('../config/db');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 
+const normalizeRole = (role) => {
+  const value = typeof role === 'string' ? role.trim().toLowerCase() : '';
+  if (value === 'administrator' || value === 'superadmin') return 'admin';
+  if (value === 'admin' || value === 'viewer') return value;
+  return value;
+};
+
 const normalizeEmail = (email) => {
   if (typeof email !== 'string') return '';
   return email.trim().toLowerCase();
@@ -12,9 +19,14 @@ const normalizeEmail = (email) => {
 const register = async (req, res, next) => {
   const { name, email: rawEmail, password, role } = req.body;
   const email = normalizeEmail(rawEmail);
+  const normalizedRole = normalizeRole(role);
 
-  if (!name || !email || !password || !role) {
+  if (!name || !email || !password || !normalizedRole) {
     return next(new ApiError(400, 'name, email, password and role are required'));
+  }
+
+  if (!['admin', 'viewer'].includes(normalizedRole)) {
+    return next(new ApiError(400, 'role must be admin or viewer'));
   }
 
   const existingUser = await prisma.user.findFirst({
@@ -36,7 +48,7 @@ const register = async (req, res, next) => {
       name,
       email,
       password_hash,
-      role
+      role: normalizedRole
     },
     select: {
       user_id: true,
@@ -98,7 +110,7 @@ const login = async (req, res, next) => {
     user_id: user.user_id,
     name: user.name,
     email: user.email,
-    role: user.role,
+    role: normalizeRole(user.role),
     created_at: user.created_at
   };
 

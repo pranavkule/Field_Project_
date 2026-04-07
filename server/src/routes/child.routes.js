@@ -16,8 +16,8 @@ router.use(authMiddleware);
 
 router.get('/', getAllChildren);
 router.get('/:id', getChildById);
-router.post('/', createChildValidator, validate, createChild);
-router.put('/:id', updateChild);
-router.delete('/:id', allowRoles('superadmin'), deleteChild);
+router.post('/', allowRoles('admin'), createChildValidator, validate, createChild);
+router.put('/:id', allowRoles('admin'), updateChild);
+router.delete('/:id', allowRoles('admin'), deleteChild);
 
 module.exports = router;

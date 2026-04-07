@@ -13,9 +13,11 @@ import SelectField from "../ui/SelectField";
 import { TH, TD } from "../ui/TableCells";
 import childAPI from "../../api/childService";
 
-const ChildDirectory = ({ children, setChildren, setPage, setSelectedChild }) => {
+const ChildDirectory = ({ children, setChildren, setPage, setSelectedChild, user }) => {
+  const isAdmin = (user?.role || "").toLowerCase() === "admin";
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [editingChild, setEditingChild] = useState(null);
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -36,6 +38,64 @@ const ChildDirectory = ({ children, setChildren, setPage, setSelectedChild }) =>
     (c.first_name?.toLowerCase().includes(search.toLowerCase())) || 
     (c.last_name?.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const resetForm = () => {
+    setShowAdd(false);
+    setEditingChild(null);
+    setError("");
+    setForm({
+      first_name: "",
+      last_name: "",
+      gender: "",
+      date_of_birth: "",
+      admission_date: "",
+      status: "Active",
+      guardian_name: "",
+      guardian_contact: "",
+      address: "",
+      blood_group: "",
+      medical_condition: "",
+      education_level: "",
+    });
+  };
+
+  const openForm = (child = null) => {
+    if (child) {
+      setEditingChild(child);
+      setForm({
+        first_name: child.first_name || "",
+        last_name: child.last_name || "",
+        gender: child.gender || "",
+        date_of_birth: child.date_of_birth || "",
+        admission_date: child.admission_date || "",
+        status: child.status || "Active",
+        guardian_name: child.guardian_name || "",
+        guardian_contact: child.guardian_contact || "",
+        address: child.address || "",
+        blood_group: child.blood_group || "",
+        medical_condition: child.medical_condition || "",
+        education_level: child.education_level || "",
+      });
+    } else {
+      setEditingChild(null);
+      setForm({
+        first_name: "",
+        last_name: "",
+        gender: "",
+        date_of_birth: "",
+        admission_date: "",
+        status: "Active",
+        guardian_name: "",
+        guardian_contact: "",
+        address: "",
+        blood_group: "",
+        medical_condition: "",
+        education_level: "",
+      });
+    }
+    setError("");
+    setShowAdd(true);
+  };
   
   const handleAdd = async () => {
     if (!form.first_name || !form.last_name || !form.gender || !form.date_of_birth || !form.status || !form.blood_group || !form.medical_condition) {
@@ -63,37 +123,45 @@ const ChildDirectory = ({ children, setChildren, setPage, setSelectedChild }) =>
         education_level: form.education_level || "",
       };
       
-      // Call backend API
-      const response = await childAPI.create(childData);
-      
-      // Add returned child to local state
-      const newChild = response.data.data;
-      const initials = (newChild.first_name + " " + newChild.last_name).split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-      setChildren((p) => [...p, {
-        id: newChild.child_id,
-        child_id: newChild.child_id,
-        ...newChild,
-        photo: initials
-      }]);
+      if (editingChild) {
+        const response = await childAPI.update(editingChild.id, childData);
+        const updatedChild = response.data.data;
+        const initials = (updatedChild.first_name + " " + updatedChild.last_name).split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+        setChildren((current) => current.map((item) => item.id === editingChild.id ? {
+          ...item,
+          id: updatedChild.child_id,
+          child_id: updatedChild.child_id,
+          ...updatedChild,
+          photo: initials,
+        } : item));
+        if (setSelectedChild) {
+          setSelectedChild((current) => current && current.id === editingChild.id ? {
+            ...current,
+            id: updatedChild.child_id,
+            child_id: updatedChild.child_id,
+            ...updatedChild,
+            photo: initials,
+          } : current);
+        }
+      } else {
+        // Call backend API
+        const response = await childAPI.create(childData);
+        
+        // Add returned child to local state
+        const newChild = response.data.data;
+        const initials = (newChild.first_name + " " + newChild.last_name).split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+        setChildren((p) => [...p, {
+          id: newChild.child_id,
+          child_id: newChild.child_id,
+          ...newChild,
+          photo: initials
+        }]);
+      }
       
       // Reset form and close modal
-      setShowAdd(false);
-      setForm({
-        first_name: "",
-        last_name: "",
-        gender: "",
-        date_of_birth: "",
-        admission_date: "",
-        status: "Active",
-        guardian_name: "",
-        guardian_contact: "",
-        address: "",
-        blood_group: "",
-        medical_condition: "",
-        education_level: "",
-      });
+      resetForm();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to add resident. Please try again.");
+      setError(err.response?.data?.message || "Failed to save resident. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -118,7 +186,7 @@ const ChildDirectory = ({ children, setChildren, setPage, setSelectedChild }) =>
 
   return (
     <div style={{ padding: 32 }}>
-      <PageHeader title="Child Directory" subtitle={`${children.length} residents in care`} action={<Btn label="Add Resident" icon="+" onClick={() => setShowAdd(true)} />} />
+      <PageHeader title="Child Directory" subtitle={`${children.length} residents in care`} action={isAdmin ? <Btn label="Add Resident" icon="+" onClick={() => openForm()} /> : null} />
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <SearchBar value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search children..." />
@@ -143,9 +211,12 @@ const ChildDirectory = ({ children, setChildren, setPage, setSelectedChild }) =>
                   <button onClick={() => { setSelectedChild(c); setPage("childProfile"); }} style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.white, fontSize: 13, color: C.primary, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>
                     View
                   </button>
-                  <button onClick={() => handleDelete(c.id)} style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.danger}`, background: C.danger + '10', color: C.danger, fontSize: 13, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>
+                  {isAdmin && <button onClick={() => openForm(c)} style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.primary}`, background: C.primary + '10', color: C.primary, fontSize: 13, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>
+                    Edit
+                  </button>}
+                  {isAdmin && <button onClick={() => handleDelete(c.id)} style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.danger}`, background: C.danger + '10', color: C.danger, fontSize: 13, cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>
                     Delete
-                  </button>
+                  </button>}
                 </TD>
               </tr>
             ))}
@@ -154,7 +225,7 @@ const ChildDirectory = ({ children, setChildren, setPage, setSelectedChild }) =>
       </Card>
 
       {showAdd && (
-        <Modal title="Add New Resident" onClose={() => setShowAdd(false)}>
+        <Modal title={editingChild ? "Edit Resident" : "Add New Resident"} onClose={resetForm}>
           {error && <div style={{ background: "#FEF2F2", color: C.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{error}</div>}
           <div style={{ 
             display: "grid", 
@@ -181,8 +252,8 @@ const ChildDirectory = ({ children, setChildren, setPage, setSelectedChild }) =>
             <SelectField label="Education Level" value={form.education_level} onChange={(e) => setForm({ ...form, education_level: e.target.value })} options={["Pre-K", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"]} />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
-            <Btn label="Cancel" variant="ghost" onClick={() => setShowAdd(false)} />
-            <Btn label={loading ? "Adding..." : "Add Resident"} onClick={handleAdd} disabled={loading} />
+            <Btn label="Cancel" variant="ghost" onClick={resetForm} />
+            <Btn label={loading ? (editingChild ? "Saving..." : "Adding...") : (editingChild ? "Save Changes" : "Add Resident")} onClick={handleAdd} disabled={loading} />
           </div>
         </Modal>
       )}

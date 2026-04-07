@@ -10,6 +10,7 @@ const Topbar = ({ user }) => {
   const hour = now.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const Icon = hour < 12 ? Sunrise : hour < 17 ? Sun : Moon;
+  const roleLabel = user?.role === "admin" ? "Admin" : user?.role === "viewer" ? "Viewer" : "Administrator";
   return (
     <div style={{ padding: "24px 32px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px" }}>
       <div>
@@ -21,7 +22,7 @@ const Topbar = ({ user }) => {
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{user?.name || "Admin"}</div>
-          <div style={{ fontSize: 12, color: C.textMid }}>{user?.role || "Administrator"}</div>
+          <div style={{ fontSize: 12, color: C.textMid }}>{roleLabel}</div>
         </div>
         <Avatar initials={user?.initials || "AD"} size={40} color={C.primary} />
       </div>

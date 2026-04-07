@@ -31,6 +31,29 @@ const addExpense = async (req, res, next) => {
   return res.status(201).json(new ApiResponse(201, expense, 'Expense added successfully'));
 };
 
+const updateExpense = async (req, res, next) => {
+  const { id } = req.params;
+  const { expense_category, description, amount, expense_date, payment_mode } = req.body;
+
+  const existingExpense = await prisma.expense.findUnique({ where: { expense_id: id } });
+  if (!existingExpense) {
+    return next(new ApiError(404, 'Expense not found'));
+  }
+
+  const updatedExpense = await prisma.expense.update({
+    where: { expense_id: id },
+    data: {
+      ...(expense_category !== undefined ? { expense_category } : {}),
+      ...(description !== undefined ? { description } : {}),
+      ...(amount !== undefined ? { amount: parseFloat(amount) } : {}),
+      ...(expense_date !== undefined ? { expense_date: new Date(expense_date) } : {}),
+      ...(payment_mode !== undefined ? { payment_mode } : {}),
+    }
+  });
+
+  return res.status(200).json(new ApiResponse(200, updatedExpense, 'Expense updated successfully'));
+};
+
 const deleteExpense = async (req, res, next) => {
   const { id } = req.params;
 
@@ -68,6 +91,7 @@ const getExpenseSummary = async (req, res, next) => {
 module.exports = {
   getAllExpenses,
   addExpense,
+  updateExpense,
   deleteExpense,
   getExpenseSummary
 };

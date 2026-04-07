@@ -9,6 +9,7 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [org, setOrg] = useState("");
+  const [role, setRole] = useState("admin");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,7 +30,7 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
           password,
           name,
           organization: org || "CareSync Institution",
-          role: "Administrator",
+          role,
         });
 
         const { token, user } = registerRes.data.data;
@@ -97,7 +98,7 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
           <p style={{ margin: "0 0 32px", fontSize: 14, color: C.textMid }}>{mode === "login" ? "Sign in to your institution's dashboard" : "Set up your institution on CareSync today"}</p>
           {error && <div style={{ background: "#FEF2F2", color: C.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{error}</div>}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {mode === "signup" && (<><Input label="Your Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" required /><Input label="Institution Name" value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Orphanage / NGO name" required /></>)}
+            {mode === "signup" && (<><Input label="Your Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" required /><Input label="Institution Name" value={org} onChange={(e) => setOrg(e.target.value)} placeholder="Orphanage / NGO name" required /><div style={{ display: "flex", flexDirection: "column", gap: 8 }}><label style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFamily: "'Inter', 'DM Sans', 'Segoe UI', system-ui, sans-serif" }}>Role<span style={{ color: C.danger }}> *</span></label><select value={role} onChange={(e) => setRole(e.target.value)} style={{ padding: "12px 16px", border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 14, color: C.text, outline: "none", background: C.white, fontFamily: "inherit", cursor: "pointer", transition: "all 0.2s ease", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}><option value="admin">Admin</option><option value="viewer">Viewer</option></select></div></>)}
             <Input label="Email Address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@institution.org" required />
             <div style={{ position: "relative" }}>
               <Input label="Password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
@@ -124,6 +125,7 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
           <button onClick={handle} disabled={loading} style={{ marginTop: 24, width: "100%", padding: "13px", background: loading ? "#CCC" : C.primary, color: C.white, border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
             {loading ? "Please wait..." : (mode === "login" ? "Sign In →" : "Create Account →")}
           </button>
+          {mode === "login" && <p style={{ margin: "14px 0 0", fontSize: 13, color: C.textMid, lineHeight: 1.6 }}>Accounts are assigned as Admin or Viewer. Admins can add and edit records; viewers can only read data.</p>}
           <p style={{ textAlign: "center", marginTop: 20, fontSize: 14, color: C.textMid }}>
             {mode === "login" ? "Don't have an account?" : "Already have an account?"} {' '}
             <button onClick={switchMode} style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "inherit" }}>

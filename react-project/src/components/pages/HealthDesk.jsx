@@ -13,9 +13,11 @@ import { SAMPLE_HEALTH } from "../../constants/data";
 import healthAPI from "../../api/healthService";
 import { Heart, Clock, CheckCircle, Plus } from "lucide-react";
 
-const HealthDesk = ({ children, needs, setNeeds }) => {
+const HealthDesk = ({ children, needs, setNeeds, user }) => {
+  const isAdmin = (user?.role || "").toLowerCase() === "admin";
   const [records, setRecords] = useState(needs || []);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ childId: "", date: "", type: "", doctor: "", notes: "", status: "Pending", followUp: "" });
@@ -23,8 +25,35 @@ const HealthDesk = ({ children, needs, setNeeds }) => {
   useEffect(() => {
     setRecords(needs || []);
   }, [needs]);
+
+  const resetForm = () => {
+    setShowAdd(false);
+    setEditingRecord(null);
+    setError("");
+    setForm({ childId: "", date: "", type: "", doctor: "", notes: "", status: "Pending", followUp: "" });
+  };
+
+  const openRecordForm = (record = null) => {
+    if (record) {
+      setEditingRecord(record);
+      setForm({
+        childId: record.childId || "",
+        date: record.date || "",
+        type: record.type || "",
+        doctor: record.doctor || "",
+        notes: record.notes || "",
+        status: record.status || "Pending",
+        followUp: record.followUp || "",
+      });
+    } else {
+      setEditingRecord(null);
+      setForm({ childId: "", date: "", type: "", doctor: "", notes: "", status: "Pending", followUp: "" });
+    }
+    setError("");
+    setShowAdd(true);
+  };
   
-  const handleAdd = async () => {
+  const handleSave = async () => {
     if (!form.childId || !form.type) {
       setError("Please select a child and type of health record.");
       return;
@@ -45,26 +74,45 @@ const HealthDesk = ({ children, needs, setNeeds }) => {
         medical_notes: `Notes: ${form.notes || 'N/A'} | Status: ${form.status} | Follow-up: ${form.followUp || 'N/A'}`,
       };
 
-      const response = await healthAPI.logVitals(payload);
-      const newRecord = {
-        id: response.data.data.health_id,
-        childId: response.data.data.child_id,
-        childName: children.find((c) => c.id === response.data.data.child_id)?.name || "Unknown",
-        date: new Date(response.data.data.record_date).toISOString().split('T')[0],
-        type: form.type,
-        doctor: form.doctor,
-        notes: form.notes,
-        status: form.status,
-        followUp: form.followUp,
-      };
+      if (editingRecord) {
+        const response = await healthAPI.update(editingRecord.id, payload);
+        const updatedRecord = response.data.data;
+        const mappedRecord = {
+          ...editingRecord,
+          id: updatedRecord.health_id,
+          childId: updatedRecord.child_id,
+          childName: children.find((c) => c.id === updatedRecord.child_id)?.name || editingRecord.childName || "Unknown",
+          date: updatedRecord.record_date ? new Date(updatedRecord.record_date).toISOString().split('T')[0] : form.date,
+          type: form.type,
+          doctor: form.doctor,
+          notes: form.notes,
+          status: form.status,
+          followUp: form.followUp,
+        };
 
-      setNeeds((p) => [newRecord, ...p]);
-      setRecords((p) => [newRecord, ...p]);
+        setNeeds((current) => current.map((item) => item.id === editingRecord.id ? mappedRecord : item));
+        setRecords((current) => current.map((item) => item.id === editingRecord.id ? mappedRecord : item));
+      } else {
+        const response = await healthAPI.logVitals(payload);
+        const newRecord = {
+          id: response.data.data.health_id,
+          childId: response.data.data.child_id,
+          childName: children.find((c) => c.id === response.data.data.child_id)?.name || "Unknown",
+          date: new Date(response.data.data.record_date).toISOString().split('T')[0],
+          type: form.type,
+          doctor: form.doctor,
+          notes: form.notes,
+          status: form.status,
+          followUp: form.followUp,
+        };
 
-      setShowAdd(false);
-      setForm({ childId: "", date: "", type: "", doctor: "", notes: "", status: "Pending", followUp: "" });
+        setNeeds((p) => [newRecord, ...p]);
+        setRecords((p) => [newRecord, ...p]);
+      }
+
+      resetForm();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to add health record. Please try again.");
+      setError(err.response?.data?.message || "Failed to save health record. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -77,7 +125,7 @@ const HealthDesk = ({ children, needs, setNeeds }) => {
 
   return (
     <div style={{ padding: 32 }}>
-      <PageHeader title="Health Desk" subtitle="Medical records and health tracking" action={<Btn label="Add Record" icon={<Plus size={16} />} onClick={() => setShowAdd(true)} />} />
+      <PageHeader title="Health Desk" subtitle="Medical records and health tracking" action={isAdmin ? <Btn label="Add Record" icon={<Plus size={16} />} onClick={() => openRecordForm()} /> : null} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 24 }}>
         {[[Heart, "Total Records", filteredRecords.length, C.primary], [Clock, "Pending Follow-ups", filteredRecords.filter((r) => r.status === "Pending Treatment").length, C.warning], [CheckCircle, "Resolved Cases", filteredRecords.filter((r) => r.status === "Resolved" || r.status === "Completed").length, C.success]].map(([Icon, l, v, c]) => (
           <Card key={l} style={{ display: "flex", alignItems: "center", gap: 14, padding: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", borderRadius: 16 }}>
@@ -94,7 +142,7 @@ const HealthDesk = ({ children, needs, setNeeds }) => {
       <Card>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr>{["Child", "Date", "Type", "Doctor", "Notes", "Status", "Follow-up"].map((h) => <TH key={h}>{h}</TH>)}</tr>
+            <tr>{["Child", "Date", "Type", "Doctor", "Notes", "Status", "Follow-up", ...(isAdmin ? [""] : [])].map((h) => <TH key={h || 'actions'}>{h}</TH>)}</tr>
           </thead>
           <tbody>
             {filteredRecords.map((r, i) => (
@@ -106,13 +154,14 @@ const HealthDesk = ({ children, needs, setNeeds }) => {
                 <TD style={{ color: C.textMid, fontSize: 13, maxWidth: 200 }}>{r.notes}</TD>
                 <TD><Badge label={r.status} color={statusColor(r.status)} /></TD>
                 <TD style={{ color: C.textMid, fontSize: 13 }}>{r.followUp || "None"}</TD>
+                {isAdmin && <TD style={{ textAlign: "right" }}><button onClick={() => openRecordForm(r)} style={{ border: `1px solid ${C.primary}`, background: C.primary + '10', color: C.primary, fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>Edit</button></TD>}
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
-      {showAdd && (
-        <Modal title="Add Health Record" onClose={() => setShowAdd(false)}>
+      {showAdd && isAdmin && (
+        <Modal title={editingRecord ? "Edit Health Record" : "Add Health Record"} onClose={resetForm}>
           {error && <div style={{ background: "#FEF2F2", color: C.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{error}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <SelectField
@@ -133,8 +182,8 @@ const HealthDesk = ({ children, needs, setNeeds }) => {
             <Input label="Follow-up Date" type="date" value={form.followUp} onChange={(e) => setForm({ ...form, followUp: e.target.value })} />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
-            <Btn label="Cancel" variant="ghost" onClick={() => setShowAdd(false)} />
-            <Btn label={loading ? "Saving..." : "Save Record"} onClick={handleAdd} disabled={loading} />
+            <Btn label="Cancel" variant="ghost" onClick={resetForm} />
+            <Btn label={loading ? (editingRecord ? "Saving..." : "Saving...") : (editingRecord ? "Save Changes" : "Save Record")} onClick={handleSave} disabled={loading} />
           </div>
         </Modal>
       )}

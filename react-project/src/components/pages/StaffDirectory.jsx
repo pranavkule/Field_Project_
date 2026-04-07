@@ -12,7 +12,8 @@ import SearchBar from "../ui/SearchBar";
 import SelectField from "../ui/SelectField";
 import staffAPI from "../../api/staffService";
 
-const StaffDirectory = ({ staff, setStaff }) => {
+const StaffDirectory = ({ staff, setStaff, user }) => {
+  const isAdmin = (user?.role || "").toLowerCase() === "admin";
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: "", role: "", dept: "", phone: "", email: "", joinDate: "", shift: "Morning" });
@@ -84,7 +85,7 @@ const StaffDirectory = ({ staff, setStaff }) => {
 
   return (
     <div style={{ padding: 32 }}>
-      <PageHeader title="Staff Directory" subtitle={`${staff.length} staff members`} action={<Btn label="Add Staff" icon="+" onClick={() => setShowAdd(true)} />} />
+      <PageHeader title="Staff Directory" subtitle={`${staff.length} staff members`} action={isAdmin ? <Btn label="Add Staff" icon="+" onClick={() => setShowAdd(true)} /> : null} />
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <SearchBar value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search staff..." />
@@ -108,7 +109,7 @@ const StaffDirectory = ({ staff, setStaff }) => {
               ))}
               <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Badge label={s.status} color={statusColor(s.status)} />
-                <button
+                {isAdmin && <button
                   onClick={() => handleDelete(s.id)}
                   style={{
                     border: `1px solid ${C.danger}`,
@@ -123,7 +124,7 @@ const StaffDirectory = ({ staff, setStaff }) => {
                   }}
                 >
                   Delete
-                </button>
+                </button>}
               </div>
             </div>
           ))}

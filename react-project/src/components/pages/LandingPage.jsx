@@ -15,44 +15,17 @@ const LandingPage = ({ onLogin, onSignup }) => (
         <Btn label="Institution Login →" onClick={onLogin} />
       </div>
     </nav>
-    <div style={{ padding: "80px 60px 60px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center", maxWidth: 1200, margin: "0 auto" }}>
-      <div>
+    <div style={{ padding: "80px 60px 60px", display: "grid", gridTemplateColumns: "1fr", gap: 60, alignItems: "center", maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ textAlign: "center" }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", background: C.primaryLight, borderRadius: 20, marginBottom: 24 }}>
           <Sparkles size={14} color={C.primary} />
           <span style={{ fontSize: 13, color: C.primary, fontWeight: 600 }}>Built for Child Care Institutions</span>
         </div>
         <h1 style={{ fontSize: 52, fontWeight: 900, color: C.text, margin: "0 0 16px", lineHeight: 1.1, letterSpacing: -1.5 }}>Manage care.<br /><span style={{ color: C.primary }}>Stay organized.</span></h1>
-        <p style={{ fontSize: 17, color: C.textMid, lineHeight: 1.7, margin: "0 0 36px", maxWidth: 460 }}>CareSync is the all-in-one record management system for orphanages — track residents, staff, health, attendance, inventory and finances in one place.</p>
-        <div style={{ display: "flex", gap: 12 }}>
+        <p style={{ fontSize: 17, color: C.textMid, lineHeight: 1.7, margin: "0 auto 36px", maxWidth: 620 }}>CareSync is the all-in-one record management system for orphanages — track residents, staff, health, attendance, inventory and finances in one place.</p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
           <Btn label="Institution Login →" onClick={onLogin} />
           <Btn label="Sign Up Free" variant="outline" onClick={onSignup} />
-        </div>
-      </div>
-      <div style={{ background: C.bg, borderRadius: 20, border: `1px solid ${C.border}`, overflow: "hidden", boxShadow: "0 24px 80px rgba(36,107,253,0.12)" }}>
-        <div style={{ background: C.white, padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#FF5F57" }} />
-          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#FEBC2E" }} />
-          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28C840" }} />
-          <span style={{ fontSize: 12, color: C.textLight, marginLeft: 8 }}>CareSync Dashboard</span>
-        </div>
-        <div style={{ padding: 20 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-            {[[Users, "Children", "24", C.primary], [UserCheck, "Staff", "12", "#8B5CF6"], [DollarSign, "Expenses", "₹1.2L", C.success], [Package, "Inventory", "48", C.warning]].map(([Icon, l, v, c]) => (
-              <div key={l} style={{ background: C.white, borderRadius: 12, padding: "12px 14px", border: `1px solid ${C.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.textLight }}>
-                  <Icon size={12} />
-                  {l}
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: c, marginTop: 4 }}>{v}</div>
-              </div>
-            ))}
-          </div>
-          { ["Health Desk", "Staff Attendance", "Inventory & Needs", "Expense Tracker"].map((item) => (
-            <div key={item} style={{ background: C.white, borderRadius: 8, padding: "10px 14px", marginBottom: 6, display: "flex", alignItems: "center", gap: 10, border: `1px solid ${C.border}` }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: C.primary }} />
-              <span style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{item}</span>
-            </div>
-          )) }
         </div>
       </div>
     </div>
@@ -79,9 +52,9 @@ const LandingPage = ({ onLogin, onSignup }) => (
       <div style={{ textAlign: "center", marginBottom: 40 }}>
         <h2 style={{ fontSize: 36, fontWeight: 800, color: C.text, margin: 0 }}>Who is CareSync for?</h2>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+      <div style={{ display: "flex", justifyContent: "center" }}>
         {[{ icon: "🏠", title: "Child Care Institutions", desc: "Orphanages and child care homes that want to digitize managing their residents, track health records, attendance, and finances.", points: ["Manage resident records", "Track health & attendance", "Monitor inventory & expenses"] }].map((f) => (
-          <Card key={f.title} style={{ padding: 32 }}>
+          <Card key={f.title} style={{ padding: 32, width: "100%", maxWidth: 820 }}>
             <div style={{ fontSize: 36, marginBottom: 16 }}>{f.icon}</div>
             <h3 style={{ fontSize: 20, fontWeight: 700, color: C.text, margin: "0 0 10px" }}>{f.title}</h3>
             <p style={{ color: C.textMid, fontSize: 15, lineHeight: 1.7, margin: "0 0 16px" }}>{f.desc}</p>

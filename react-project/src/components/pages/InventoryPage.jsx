@@ -12,16 +12,44 @@ import { TH, TD } from "../ui/TableCells";
 import inventoryAPI from "../../api/inventoryService";
 import { Package, ClipboardList, Plus } from "lucide-react";
 
-const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
+const InventoryPage = ({ inventory, setInventory, needs, setNeeds, user }) => {
+  const isAdmin = (user?.role || "").toLowerCase() === "admin";
   const [tab, setTab] = useState("inventory");
   const [showAddInv, setShowAddInv] = useState(false);
   const [showAddNeed, setShowAddNeed] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [invError, setInvError] = useState("");
   const [needError, setNeedError] = useState("");
   const [invLoading, setInvLoading] = useState(false);
   const [needLoading, setNeedLoading] = useState(false);
   const [invForm, setInvForm] = useState({ item: "", category: "", quantity: "", unit: "", minStock: "", status: "Adequate" });
   const [needForm, setNeedForm] = useState({ item: "", category: "", quantity: "", priority: "Medium", requestedBy: "", dateRequested: "", status: "Pending" });
+
+  const closeInvModal = () => {
+    setShowAddInv(false);
+    setEditingItem(null);
+    setInvError("");
+    setInvForm({ item: "", category: "", quantity: "", unit: "", minStock: "", status: "Adequate" });
+  };
+
+  const openInvModal = (item = null) => {
+    if (item) {
+      setEditingItem(item);
+      setInvForm({
+        item: item.item || "",
+        category: item.category || "",
+        quantity: item.quantity?.toString?.() || String(item.quantity || ""),
+        unit: item.unit || "",
+        minStock: item.minStock?.toString?.() || String(item.minStock || ""),
+        status: item.status || "Adequate",
+      });
+    } else {
+      setEditingItem(null);
+      setInvForm({ item: "", category: "", quantity: "", unit: "", minStock: "", status: "Adequate" });
+    }
+    setInvError("");
+    setShowAddInv(true);
+  };
   
   const addInventory = async () => {
     if (!invForm.item || !invForm.category || !invForm.quantity) {
@@ -33,35 +61,47 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
     setInvError("");
 
     try {
-      // Call backend API using backend field names
-      const response = await inventoryAPI.create({
+      const payload = {
         item_name: invForm.item,
         category: invForm.category,
         quantity_available: Number(invForm.quantity),
-      });
-      
-      // Add to local state with UI model mapping
-      const newItem = response.data.data;
-      setInventory((p) => [
-        {
-          id: newItem.item_id,
-          item: newItem.item_name,
-          category: newItem.category,
-          quantity: newItem.quantity_available,
+      };
+
+      if (editingItem) {
+        const response = await inventoryAPI.update(editingItem.id, payload);
+        const updatedItem = response.data.data;
+        setInventory((current) => current.map((item) => item.id === editingItem.id ? {
+          ...item,
+          item: updatedItem.item_name,
+          category: updatedItem.category,
+          quantity: updatedItem.quantity_available,
           unit: invForm.unit,
           minStock: Number(invForm.minStock),
           status: invForm.status,
-          lastUpdated: newItem.last_updated ? new Date(newItem.last_updated).toISOString().split('T')[0] : "",
-        },
-        ...p,
-      ]);
-      
-      // Clear form and close modal
-      setShowAddInv(false);
-      setInvForm({ item: "", category: "", quantity: "", unit: "", minStock: "", status: "Adequate" });
+          lastUpdated: updatedItem.last_updated ? new Date(updatedItem.last_updated).toISOString().split('T')[0] : item.lastUpdated,
+        } : item));
+      } else {
+        const response = await inventoryAPI.create(payload);
+        const newItem = response.data.data;
+        setInventory((p) => [
+          {
+            id: newItem.item_id,
+            item: newItem.item_name,
+            category: newItem.category,
+            quantity: newItem.quantity_available,
+            unit: invForm.unit,
+            minStock: Number(invForm.minStock),
+            status: invForm.status,
+            lastUpdated: newItem.last_updated ? new Date(newItem.last_updated).toISOString().split('T')[0] : "",
+          },
+          ...p,
+        ]);
+      }
+
+      closeInvModal();
     } catch (err) {
       console.error("Inventory add failed", err);
-      const message = err.response?.data?.message || "Failed to add inventory item. Please try again.";
+      const message = err.response?.data?.message || "Failed to save inventory item. Please try again.";
       setInvError(message);
     } finally {
       setInvLoading(false);
@@ -79,7 +119,7 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
     <div style={{ padding: 32 }}>
       <PageHeader
         title="Inventory & Needs"
-        action={<div style={{ display: "flex", gap: 10 }}><Btn label="Add Item" icon={<Plus size={16} />} onClick={() => setShowAddInv(true)} variant="outline" /><Btn label="Add Need" icon={<ClipboardList size={16} />} onClick={() => setShowAddNeed(true)} /></div>}
+        action={isAdmin ? <div style={{ display: "flex", gap: 10 }}><Btn label="Add Item" icon={<Plus size={16} />} onClick={() => openInvModal()} variant="outline" /><Btn label="Add Need" icon={<ClipboardList size={16} />} onClick={() => setShowAddNeed(true)} /></div> : null}
       />
       <div style={{ display: "flex", gap: 4, marginBottom: 20, background: C.bg, borderRadius: 12, padding: 4, width: "fit-content", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.04)" }}>
         {[ ["inventory", <><Package size={16} /> Inventory</>], ["needs", <><ClipboardList size={16} /> Needs & Requests</>]].map(([id, label]) => (
@@ -89,7 +129,7 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
       {tab === "inventory" && (
         <Card>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr>{["Item", "Category", "Quantity", "Min. Stock", "Status", "Last Updated"].map((h) => <TH key={h}>{h}</TH>)}</tr></thead>
+            <thead><tr>{["Item", "Category", "Quantity", "Min. Stock", "Status", "Last Updated", ...(isAdmin ? [""] : [])].map((h) => <TH key={h || 'actions'}>{h}</TH>)}</tr></thead>
             <tbody>
               {inventory.map((item, i) => (
                 <tr key={item.id} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#FAFBFC" }}>
@@ -99,6 +139,7 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
                   <TD style={{ color: C.textMid, fontSize: 13 }}>{item.minStock} {item.unit}</TD>
                   <TD><Badge label={item.status} color={statusColor(item.status)} /></TD>
                   <TD style={{ color: C.textMid, fontSize: 13 }}>{item.lastUpdated}</TD>
+                  {isAdmin && <TD style={{ textAlign: "right" }}><button onClick={() => openInvModal(item)} style={{ border: `1px solid ${C.primary}`, background: C.primary + '10', color: C.primary, fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>Edit</button></TD>}
                 </tr>
               ))}
             </tbody>
@@ -126,8 +167,8 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
         </Card>
       )}
 
-      {showAddInv && (
-        <Modal title="Add Inventory Item" onClose={() => setShowAddInv(false)}>
+      {showAddInv && isAdmin && (
+        <Modal title={editingItem ? "Edit Inventory Item" : "Add Inventory Item"} onClose={closeInvModal}>
           {invError && <div style={{ background: "#FEF2F2", color: C.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{invError}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <Input label="Item Name" value={invForm.item} onChange={(e) => setInvForm({ ...invForm, item: e.target.value })} placeholder="Item name" required />
@@ -138,13 +179,13 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds }) => {
             <SelectField label="Status" value={invForm.status} onChange={(e) => setInvForm({ ...invForm, status: e.target.value })} options={["Adequate", "Low Stock", "Critical"]} />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
-            <Btn label="Cancel" variant="ghost" onClick={() => setShowAddInv(false)} />
-            <Btn label={invLoading ? "Adding..." : "Add Item"} onClick={addInventory} disabled={invLoading} />
+            <Btn label="Cancel" variant="ghost" onClick={closeInvModal} />
+            <Btn label={invLoading ? (editingItem ? "Saving..." : "Adding...") : (editingItem ? "Save Changes" : "Add Item")} onClick={addInventory} disabled={invLoading} />
           </div>
         </Modal>
       )}
 
-      {showAddNeed && (
+      {showAddNeed && isAdmin && (
         <Modal title="Add Need / Request" onClose={() => setShowAddNeed(false)}>
           {needError && <div style={{ background: "#FEF2F2", color: C.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{needError}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>

@@ -14,8 +14,8 @@ router.use(authMiddleware);
 
 router.get('/', getAllStaff);
 router.get('/:id', getStaffById);
-router.post('/', createStaff);
-router.put('/:id', updateStaff);
-router.delete('/:id', allowRoles('superadmin'), deleteStaff);
+router.post('/', allowRoles('admin'), createStaff);
+router.put('/:id', allowRoles('admin'), updateStaff);
+router.delete('/:id', allowRoles('admin'), deleteStaff);
 
 module.exports = router;
