@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import C from "../../constants/colors";
 import { statusColor } from "../../utils/statusColor";
+import attendanceAPI from "../../api/attendanceService";
 import Avatar from "../ui/Avatar";
 import Badge from "../ui/Badge";
 import Card from "../ui/Card";
@@ -44,6 +45,39 @@ const formatPeriodLabel = (startDate, endDate) => {
   }
 
   return `Until ${new Date(endDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`;
+};
+
+const mapAttendanceRecord = (record, staffList) => {
+  const staffMember = staffList.find((person) => person.id === record.staff_id);
+  const attendanceDate = record.attendance_date ? new Date(record.attendance_date) : null;
+
+  return {
+    recordId: record.attendance_id,
+    staffId: record.staff_id,
+    name: staffMember?.name || "",
+    role: staffMember?.role || "",
+    dept: staffMember?.dept || "",
+    date: attendanceDate && !Number.isNaN(attendanceDate.getTime()) ? toDateInputValue(attendanceDate) : "",
+    status: record.status,
+    createdAt: record.created_at || "",
+  };
+};
+
+const normalizeAttendanceRecords = (records) => {
+  const latestByKey = new Map();
+
+  records.forEach((record) => {
+    const key = `${record.staffId}-${record.date}`;
+    const existing = latestByKey.get(key);
+    const currentTime = record.createdAt ? new Date(record.createdAt).getTime() : 0;
+    const existingTime = existing?.createdAt ? new Date(existing.createdAt).getTime() : 0;
+
+    if (!existing || currentTime >= existingTime) {
+      latestByKey.set(key, record);
+    }
+  });
+
+  return Array.from(latestByKey.values()).sort((a, b) => b.date.localeCompare(a.date));
 };
 
 const buildMonthBuckets = (records, today, startDate, endDate) => {
@@ -101,6 +135,7 @@ const AttendancePage = ({ staff, user }) => {
   const [selectedYear, setSelectedYear] = useState(String(today.getFullYear()));
   const [periodPreset, setPeriodPreset] = useState("custom");
   const [message, setMessage] = useState("");
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
 
   useEffect(() => {
     if (!staffList.length) return;
@@ -116,25 +151,26 @@ const AttendancePage = ({ staff, user }) => {
     });
   }, [staffList]);
 
-  const [attendanceRecords, setAttendanceRecords] = useState(() => {
-    return staffList.flatMap((person, staffIndex) => {
-      return Array.from({ length: 12 }).map((_, idx) => {
-        const date = new Date(today);
-        date.setDate(today.getDate() - idx * 3 - staffIndex);
-        const isoDate = date.toISOString().split("T")[0];
-        const status = idx % 6 === 0 ? "Absent" : idx % 5 === 0 ? "On Leave" : "Present";
-        return {
-          recordId: `${person.id}-${isoDate}`,
-          staffId: person.id,
-          name: person.name,
-          role: person.role,
-          dept: person.dept,
-          date: isoDate,
-          status,
-        };
-      });
-    });
-  });
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      if (!staffList.length) {
+        setAttendanceRecords([]);
+        return;
+      }
+
+      try {
+        const response = await attendanceAPI.getAll();
+        const records = Array.isArray(response.data.data) ? response.data.data : [];
+        const mappedRecords = records.map((record) => mapAttendanceRecord(record, staffList));
+        setAttendanceRecords(normalizeAttendanceRecords(mappedRecords));
+      } catch (err) {
+        console.error("Failed to fetch attendance records:", err);
+        setAttendanceRecords([]);
+      }
+    };
+
+    fetchAttendance();
+  }, [staffList]);
 
   const selectedHistoryStaff = staffList.find((s) => s.id === historyStaffId) || staffList[0] || {};
   const selectedMarkStaff = staffList.find((s) => s.id === markStaffId) || staffList[0] || {};
@@ -204,11 +240,6 @@ const AttendancePage = ({ staff, user }) => {
     setPeriodPreset(preset.label.toLowerCase().replace(/\s+/g, "-"));
   };
 
-  const handlePeriodFieldChange = (setter) => (value) => {
-    setter(value);
-    setPeriodPreset("custom");
-  };
-
   const clearPeriodFilter = () => {
     setHistoryStartDate("");
     setHistoryEndDate("");
@@ -247,27 +278,25 @@ const AttendancePage = ({ staff, user }) => {
       return;
     }
 
-    setAttendanceRecords((prev) => {
-      const existingIndex = prev.findIndex((record) => record.staffId === markStaffId && record.date === markDate);
-      const updated = [...prev];
-      if (existingIndex >= 0) {
-        updated[existingIndex] = { ...updated[existingIndex], status: markStatus };
-      } else {
-        updated.unshift({
-          recordId: `${markStaffId}-${markDate}`,
-          staffId: markStaffId,
-          name: selectedMarkStaff.name,
-          role: selectedMarkStaff.role,
-          dept: selectedMarkStaff.dept,
-          date: markDate,
+    const saveAttendance = async () => {
+      try {
+        const response = await attendanceAPI.create({
+          staff_id: markStaffId,
+          attendance_date: markDate,
           status: markStatus,
+          remarks: "",
         });
-      }
-      return updated;
-    });
 
-    setMessage(`Attendance marked for ${selectedMarkStaff.name} on ${markDate}.`);
-    setMarkOpen(false);
+        const savedRecord = mapAttendanceRecord(response.data.data, staffList);
+        setAttendanceRecords((prev) => normalizeAttendanceRecords([savedRecord, ...prev]));
+        setMessage(`Attendance marked for ${selectedMarkStaff.name} on ${markDate}.`);
+        setMarkOpen(false);
+      } catch (err) {
+        setMessage(err.response?.data?.message || "Failed to save attendance. Please try again.");
+      }
+    };
+
+    saveAttendance();
   };
 
   return (
@@ -359,7 +388,7 @@ const AttendancePage = ({ staff, user }) => {
                           }}
                         >
                           {staffMember.name}
-                          <div style={{ fontSize: 12, color: C.textMid, marginTop: 4 }}>{staffMember.role} · {staffMember.dept}</div>
+                          <div style={{ fontSize: 12, color: C.textMid, marginTop: 4 }}>{staffMember.dept ? `${staffMember.role} · ${staffMember.dept}` : staffMember.role}</div>
                         </button>
                       ))
                     ) : (
@@ -449,21 +478,7 @@ const AttendancePage = ({ staff, user }) => {
                   Apply
                 </button>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10, width: "100%" }}>
-                <input
-                  type="date"
-                  value={historyStartDate}
-                  onChange={(e) => handlePeriodFieldChange(setHistoryStartDate)(e.target.value)}
-                  style={{ width: "100%", minWidth: 0, boxSizing: "border-box", padding: "12px 16px", borderRadius: 14, border: `1.5px solid ${C.border}`, outline: "none", fontSize: 14, color: C.text, background: C.white }}
-                />
-                <input
-                  type="date"
-                  value={historyEndDate}
-                  onChange={(e) => handlePeriodFieldChange(setHistoryEndDate)(e.target.value)}
-                  style={{ width: "100%", minWidth: 0, boxSizing: "border-box", padding: "12px 16px", borderRadius: 14, border: `1.5px solid ${C.border}`, outline: "none", fontSize: 14, color: C.text, background: C.white }}
-                />
-              </div>
-              <div style={{ marginTop: 8, fontSize: 12, color: C.textMid }}>Leave both blank to view the full history. Use the quick preset for a whole month.</div>
+              <div style={{ marginTop: 8, fontSize: 12, color: C.textMid }}>Use month/year or quick presets to filter the history.</div>
             </div>
           </div>
 
@@ -500,7 +515,7 @@ const AttendancePage = ({ staff, user }) => {
                 <div key={record.recordId} style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 0.9fr", gap: 12, alignItems: "center", padding: "14px 18px", borderBottom: `1px solid ${C.border}` }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{new Date(record.date).toLocaleDateString()}</div>
-                    <div style={{ fontSize: 12, color: C.textMid, marginTop: 4 }}>{record.dept} · {record.role}</div>
+                    <div style={{ fontSize: 12, color: C.textMid, marginTop: 4 }}>{record.dept ? `${record.dept} · ${record.role}` : record.role}</div>
                   </div>
                   <div style={{ fontSize: 14, color: C.textMid }}>{record.date}</div>
                   <div style={{ justifySelf: "end" }}><Badge label={record.status} color={statusColor(record.status)} /></div>

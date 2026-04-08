@@ -9,13 +9,12 @@ import Modal from "../ui/Modal";
 import PageHeader from "../ui/PageHeader";
 import { TH, TD } from "../ui/TableCells";
 import SelectField from "../ui/SelectField";
-import { SAMPLE_HEALTH } from "../../constants/data";
 import healthAPI from "../../api/healthService";
 import { Heart, Clock, CheckCircle, Plus } from "lucide-react";
 
-const HealthDesk = ({ children, needs, setNeeds, user }) => {
+const HealthDesk = ({ children, healthRecords, setHealthRecords, user }) => {
   const isAdmin = (user?.role || "").toLowerCase() === "admin";
-  const [records, setRecords] = useState(needs || []);
+  const [records, setRecords] = useState(healthRecords || []);
   const [showAdd, setShowAdd] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [error, setError] = useState("");
@@ -23,8 +22,8 @@ const HealthDesk = ({ children, needs, setNeeds, user }) => {
   const [form, setForm] = useState({ childId: "", date: "", type: "", doctor: "", notes: "", status: "Pending", followUp: "" });
 
   useEffect(() => {
-    setRecords(needs || []);
-  }, [needs]);
+    setRecords(healthRecords || []);
+  }, [healthRecords]);
 
   const resetForm = () => {
     setShowAdd(false);
@@ -90,7 +89,7 @@ const HealthDesk = ({ children, needs, setNeeds, user }) => {
           followUp: form.followUp,
         };
 
-        setNeeds((current) => current.map((item) => item.id === editingRecord.id ? mappedRecord : item));
+        setHealthRecords((current) => current.map((item) => item.id === editingRecord.id ? mappedRecord : item));
         setRecords((current) => current.map((item) => item.id === editingRecord.id ? mappedRecord : item));
       } else {
         const response = await healthAPI.logVitals(payload);
@@ -106,7 +105,7 @@ const HealthDesk = ({ children, needs, setNeeds, user }) => {
           followUp: form.followUp,
         };
 
-        setNeeds((p) => [newRecord, ...p]);
+        setHealthRecords((p) => [newRecord, ...p]);
         setRecords((p) => [newRecord, ...p]);
       }
 
@@ -118,10 +117,12 @@ const HealthDesk = ({ children, needs, setNeeds, user }) => {
     }
   };
 
-  const filteredRecords = records.filter((r) => {
-    const childName = r.childName || children.find((c) => c.id === r.childId)?.name;
-    return childName && childName.trim().toLowerCase() !== "unknown";
-  });
+  const displayRecords = records.map((record) => ({
+    ...record,
+    childName: record.childName || children.find((c) => c.id === record.childId)?.name || `Child ${record.childId?.slice?.(0, 8) || "Unknown"}`,
+  }));
+
+  const filteredRecords = displayRecords.filter((record) => record.childName.trim().toLowerCase() !== "unknown");
 
   return (
     <div style={{ padding: 32 }}>

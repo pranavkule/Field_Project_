@@ -10,6 +10,7 @@ import PageHeader from "../ui/PageHeader";
 import SelectField from "../ui/SelectField";
 import { TH, TD } from "../ui/TableCells";
 import inventoryAPI from "../../api/inventoryService";
+import donationAPI from "../../api/donationService";
 import { Package, ClipboardList, Plus } from "lucide-react";
 
 const InventoryPage = ({ inventory, setInventory, needs, setNeeds, user }) => {
@@ -109,10 +110,49 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds, user }) => {
   };
   
   const addNeed = () => {
-    if (!needForm.item) return;
-    setNeeds((p) => [...p, { ...needForm, id: p.length + 1 }]);
-    setShowAddNeed(false);
-    setNeedForm({ item: "", category: "", quantity: "", priority: "Medium", requestedBy: "", dateRequested: "", status: "Pending" });
+    const submitNeed = async () => {
+      if (!needForm.item || !needForm.quantity) {
+        setNeedError("Item and quantity are required.");
+        return;
+      }
+
+      setNeedLoading(true);
+      setNeedError("");
+
+      try {
+        const response = await donationAPI.create({
+          item_name: needForm.item,
+          category: needForm.category || "Other",
+          quantity_required: Number(needForm.quantity),
+          quantity_received: 0,
+          priority: needForm.priority,
+          donor_name: needForm.requestedBy || "",
+          date_received: needForm.dateRequested ? new Date(needForm.dateRequested).toISOString() : new Date().toISOString(),
+          is_active: true,
+        });
+
+        const createdNeed = response.data.data;
+        setNeeds((p) => [{
+          id: createdNeed.donation_id,
+          item: createdNeed.item_name,
+          category: createdNeed.category,
+          quantity: createdNeed.quantity_required,
+          priority: createdNeed.priority || "Medium",
+          requestedBy: createdNeed.donor_name || "",
+          dateRequested: createdNeed.date_received ? new Date(createdNeed.date_received).toISOString().split('T')[0] : "",
+          status: createdNeed.quantity_received >= createdNeed.quantity_required ? "Completed" : "Pending",
+        }, ...p]);
+
+        setShowAddNeed(false);
+        setNeedForm({ item: "", category: "", quantity: "", priority: "Medium", requestedBy: "", dateRequested: "", status: "Pending" });
+      } catch (err) {
+        setNeedError(err.response?.data?.message || "Failed to submit request. Please try again.");
+      } finally {
+        setNeedLoading(false);
+      }
+    };
+
+    submitNeed();
   };
 
   return (

@@ -1,7 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 
 import C from './constants/colors';
-import { SAMPLE_CHILDREN, SAMPLE_STAFF, SAMPLE_HEALTH, SAMPLE_INVENTORY, SAMPLE_NEEDS, SAMPLE_EXPENSES } from './constants/data';
 
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
@@ -18,6 +17,7 @@ import LandingPage from './components/pages/LandingPage';
 import AuthPage from './components/pages/AuthPage';
 import childAPI from './api/childService';
 import healthAPI from './api/healthService';
+import donationAPI from './api/donationService';
 import expenseAPI from './api/expenseService';
 import inventoryAPI from './api/inventoryService';
 import staffAPI from './api/staffService';
@@ -56,11 +56,12 @@ export default function App() {
 
   const [page, setPage] = useState('dashboard');
   const [selectedChild, setSelectedChild] = useState(null);
-  const [children, setChildren] = useState(SAMPLE_CHILDREN);
-  const [staff, setStaff] = useState(SAMPLE_STAFF);
-  const [expenses, setExpenses] = useState(SAMPLE_EXPENSES);
-  const [inventory, setInventory] = useState(SAMPLE_INVENTORY);
-  const [needs, setNeeds] = useState(SAMPLE_NEEDS);
+  const [children, setChildren] = useState([]);
+  const [staff, setStaff] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [inventory, setInventory] = useState([]);
+  const [needs, setNeeds] = useState([]);
+  const [healthRecords, setHealthRecords] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Fetch data from backend when user is logged in
@@ -71,17 +72,19 @@ export default function App() {
       setLoading(true);
       try {
         // Fetch all data from backend in parallel
-        const [childrenRes, staffRes, healthRes, expensesRes, inventoryRes] = await Promise.all([
+        const [childrenRes, staffRes, healthRes, donationsRes, expensesRes, inventoryRes] = await Promise.all([
           childAPI.getAll(),
           staffAPI.getAll(),
           healthAPI.getAll(),
+          donationAPI.getAll(),
           expenseAPI.getAll(),
           inventoryAPI.getAll(),
         ]);
 
         // Update state with fetched data
         if (childrenRes.data.data && childrenRes.data.data.items) {
-          setChildren(childrenRes.data.data.items.map((item) => ({
+          const childItems = childrenRes.data.data.items;
+          setChildren(childItems.map((item) => ({
             id: item.child_id,
             first_name: item.first_name,
             last_name: item.last_name,
@@ -100,32 +103,53 @@ export default function App() {
           })));
         }
         
-        if (staffRes.data.data && Array.isArray(staffRes.data.data)) {
-          setStaff(staffRes.data.data.map((item) => ({
-            id: item.staff_id,
-            name: `${item.first_name || ""} ${item.last_name || ""}`.trim(),
-            role: item.role || "",
-            dept: item.department || "",
-            phone: item.contact_number || "",
-            email: item.email || "",
-            joinDate: item.joining_date ? new Date(item.joining_date).toISOString().split('T')[0] : "",
-            shift: item.shift || "Morning",
-            status: item.status || "Active",
-            photo: (item.first_name || "").slice(0, 1).toUpperCase() + (item.last_name || "").slice(0, 1).toUpperCase(),
-          })));
-        }
+        const staffPayload = staffRes?.data?.data;
+        const staffItems = Array.isArray(staffPayload)
+          ? staffPayload
+          : Array.isArray(staffPayload?.items)
+            ? staffPayload.items
+            : [];
+
+        setStaff(staffItems.map((item) => ({
+          id: item.staff_id,
+          name: `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+          role: item.role || "",
+          dept: item.department || "",
+          phone: item.contact_number || "",
+          email: item.email || "",
+          joinDate: item.joining_date ? new Date(item.joining_date).toISOString().split('T')[0] : "",
+          shift: item.shift || "Morning",
+          status: item.status || "Active",
+          photo: (item.first_name || "").slice(0, 1).toUpperCase() + (item.last_name || "").slice(0, 1).toUpperCase(),
+        })));
 
         if (healthRes.data.data && Array.isArray(healthRes.data.data)) {
-          setNeeds(healthRes.data.data.map((item) => ({
+          const childItems = childrenRes.data.data?.items || [];
+          setHealthRecords(healthRes.data.data.map((item) => ({
             id: item.health_id,
             childId: item.child_id,
-            childName: item.child_name || "",
+            childName: childItems.find((child) => child.child_id === item.child_id)
+              ? `${childItems.find((child) => child.child_id === item.child_id).first_name || ""} ${childItems.find((child) => child.child_id === item.child_id).last_name || ""}`.trim()
+              : "",
             date: item.record_date ? new Date(item.record_date).toISOString().split('T')[0] : "",
             type: item.blood_pressure || "Routine Checkup",
             doctor: item.doctor || "",
             notes: item.medical_notes || "",
             status: item.status || "Pending",
             followUp: item.follow_up || "",
+          })));
+        }
+
+        if (donationsRes.data.data && Array.isArray(donationsRes.data.data)) {
+          setNeeds(donationsRes.data.data.map((item) => ({
+            id: item.donation_id,
+            item: item.item_name,
+            category: item.category,
+            quantity: item.quantity_required,
+            priority: item.priority || "Medium",
+            requestedBy: item.donor_name || "",
+            dateRequested: item.date_received ? new Date(item.date_received).toISOString().split('T')[0] : "",
+            status: item.quantity_received >= item.quantity_required ? "Completed" : "Pending",
           })));
         }
         
@@ -155,7 +179,6 @@ export default function App() {
         }
       } catch (err) {
         console.error('Failed to fetch data:', err);
-        // Keep using sample data if fetch fails
       } finally {
         setLoading(false);
       }
@@ -208,7 +231,7 @@ export default function App() {
       case 'staff':
         return <StaffDirectory staff={staff} setStaff={setStaff} user={user} />;
       case 'health':
-        return <HealthDesk children={children} needs={needs} setNeeds={setNeeds} user={user} />;
+        return <HealthDesk children={children} healthRecords={healthRecords} setHealthRecords={setHealthRecords} user={user} />;
       case 'attendance':
         return <AttendancePage staff={staff} user={user} />;
       case 'inventory':

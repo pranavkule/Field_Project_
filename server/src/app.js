@@ -45,11 +45,6 @@ app.use(cors({
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Placeholder health route
-app.get('/api/health', (req, res) => {
-  res.json({ statusCode: 200, data: { status: 'ok' }, message: 'Server is running' });
-});
-
 // Server readiness check (no auth)
 app.get('/api/health-check', (req, res) => {
   res.json({ status: 'ok' });
