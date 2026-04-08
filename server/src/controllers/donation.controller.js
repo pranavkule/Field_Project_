@@ -54,7 +54,16 @@ const createDonation = async (req, res, next) => {
 
 const updateDonation = async (req, res, next) => {
   const { id } = req.params;
-  const { quantity_received, donor_name, date_received } = req.body;
+  const {
+    item_name,
+    category,
+    quantity_required,
+    quantity_received,
+    priority,
+    donor_name,
+    date_received,
+    is_active
+  } = req.body;
 
   const donation = await prisma.donation.findUnique({ where: { donation_id: id } });
   if (!donation) {
@@ -62,9 +71,14 @@ const updateDonation = async (req, res, next) => {
   }
 
   const data = {};
+  if (item_name !== undefined) data.item_name = item_name;
+  if (category !== undefined) data.category = category;
+  if (quantity_required !== undefined) data.quantity_required = parseInt(quantity_required, 10);
   if (quantity_received !== undefined) data.quantity_received = parseInt(quantity_received, 10);
+  if (priority !== undefined) data.priority = priority;
   if (donor_name !== undefined) data.donor_name = donor_name;
   if (date_received !== undefined) data.date_received = new Date(date_received);
+  if (is_active !== undefined) data.is_active = Boolean(is_active);
 
   const updated = await prisma.donation.update({
     where: { donation_id: id },

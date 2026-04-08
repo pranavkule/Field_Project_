@@ -19,12 +19,41 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds, user }) => {
   const [showAddInv, setShowAddInv] = useState(false);
   const [showAddNeed, setShowAddNeed] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [editingNeed, setEditingNeed] = useState(null);
   const [invError, setInvError] = useState("");
   const [needError, setNeedError] = useState("");
   const [invLoading, setInvLoading] = useState(false);
   const [needLoading, setNeedLoading] = useState(false);
   const [invForm, setInvForm] = useState({ item: "", category: "", quantity: "", unit: "", minStock: "", status: "Adequate" });
   const [needForm, setNeedForm] = useState({ item: "", category: "", quantity: "", priority: "Medium", requestedBy: "", dateRequested: "", status: "Pending" });
+
+  const closeNeedModal = () => {
+    setShowAddNeed(false);
+    setEditingNeed(null);
+    setNeedError("");
+    setNeedForm({ item: "", category: "", quantity: "", priority: "Medium", requestedBy: "", dateRequested: "", status: "Pending" });
+  };
+
+  const openNeedModal = (need = null) => {
+    if (need) {
+      setEditingNeed(need);
+      setNeedForm({
+        item: need.item || "",
+        category: need.category || "",
+        quantity: need.quantity?.toString?.() || String(need.quantity || ""),
+        priority: need.priority || "Medium",
+        requestedBy: need.requestedBy || "",
+        dateRequested: need.dateRequested || "",
+        status: need.status || "Pending",
+      });
+    } else {
+      setEditingNeed(null);
+      setNeedForm({ item: "", category: "", quantity: "", priority: "Medium", requestedBy: "", dateRequested: "", status: "Pending" });
+    }
+
+    setNeedError("");
+    setShowAddNeed(true);
+  };
 
   const closeInvModal = () => {
     setShowAddInv(false);
@@ -109,28 +138,44 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds, user }) => {
     }
   };
   
-  const addNeed = () => {
-    const submitNeed = async () => {
-      if (!needForm.item || !needForm.quantity) {
-        setNeedError("Item and quantity are required.");
-        return;
-      }
+  const saveNeed = async () => {
+    if (!needForm.item || !needForm.quantity) {
+      setNeedError("Item and quantity are required.");
+      return;
+    }
 
-      setNeedLoading(true);
-      setNeedError("");
+    setNeedLoading(true);
+    setNeedError("");
 
-      try {
-        const response = await donationAPI.create({
-          item_name: needForm.item,
-          category: needForm.category || "Other",
-          quantity_required: Number(needForm.quantity),
-          quantity_received: 0,
-          priority: needForm.priority,
-          donor_name: needForm.requestedBy || "",
-          date_received: needForm.dateRequested ? new Date(needForm.dateRequested).toISOString() : new Date().toISOString(),
-          is_active: true,
-        });
+    try {
+      const quantityRequired = Number(needForm.quantity);
+      const isCompleted = needForm.status === "Completed";
+      const payload = {
+        item_name: needForm.item,
+        category: needForm.category || "Other",
+        quantity_required: quantityRequired,
+        quantity_received: isCompleted ? quantityRequired : 0,
+        priority: needForm.priority,
+        donor_name: needForm.requestedBy || "",
+        date_received: needForm.dateRequested ? new Date(needForm.dateRequested).toISOString() : new Date().toISOString(),
+        is_active: true,
+      };
 
+      if (editingNeed) {
+        const response = await donationAPI.update(editingNeed.id, payload);
+        const updatedNeed = response.data.data;
+        setNeeds((current) => current.map((need) => need.id === editingNeed.id ? {
+          ...need,
+          item: updatedNeed.item_name,
+          category: updatedNeed.category,
+          quantity: updatedNeed.quantity_required,
+          priority: updatedNeed.priority || "Medium",
+          requestedBy: updatedNeed.donor_name || "",
+          dateRequested: updatedNeed.date_received ? new Date(updatedNeed.date_received).toISOString().split('T')[0] : "",
+          status: updatedNeed.quantity_received >= updatedNeed.quantity_required ? "Completed" : "Pending",
+        } : need));
+      } else {
+        const response = await donationAPI.create(payload);
         const createdNeed = response.data.data;
         setNeeds((p) => [{
           id: createdNeed.donation_id,
@@ -142,24 +187,21 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds, user }) => {
           dateRequested: createdNeed.date_received ? new Date(createdNeed.date_received).toISOString().split('T')[0] : "",
           status: createdNeed.quantity_received >= createdNeed.quantity_required ? "Completed" : "Pending",
         }, ...p]);
-
-        setShowAddNeed(false);
-        setNeedForm({ item: "", category: "", quantity: "", priority: "Medium", requestedBy: "", dateRequested: "", status: "Pending" });
-      } catch (err) {
-        setNeedError(err.response?.data?.message || "Failed to submit request. Please try again.");
-      } finally {
-        setNeedLoading(false);
       }
-    };
 
-    submitNeed();
+      closeNeedModal();
+    } catch (err) {
+      setNeedError(err.response?.data?.message || "Failed to save request. Please try again.");
+    } finally {
+      setNeedLoading(false);
+    }
   };
 
   return (
     <div style={{ padding: 32 }}>
       <PageHeader
         title="Inventory & Needs"
-        action={isAdmin ? <div style={{ display: "flex", gap: 10 }}><Btn label="Add Item" icon={<Plus size={16} />} onClick={() => openInvModal()} variant="outline" /><Btn label="Add Need" icon={<ClipboardList size={16} />} onClick={() => setShowAddNeed(true)} /></div> : null}
+        action={isAdmin ? <div style={{ display: "flex", gap: 10 }}><Btn label="Add Item" icon={<Plus size={16} />} onClick={() => openInvModal()} variant="outline" /><Btn label="Add Need" icon={<ClipboardList size={16} />} onClick={() => openNeedModal()} /></div> : null}
       />
       <div style={{ display: "flex", gap: 4, marginBottom: 20, background: C.bg, borderRadius: 12, padding: 4, width: "fit-content", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.04)" }}>
         {[ ["inventory", <><Package size={16} /> Inventory</>], ["needs", <><ClipboardList size={16} /> Needs & Requests</>]].map(([id, label]) => (
@@ -189,7 +231,7 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds, user }) => {
       {tab === "needs" && (
         <Card>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr>{["Item", "Category", "Qty", "Priority", "Requested By", "Date", "Status"].map((h) => <TH key={h}>{h}</TH>)}</tr></thead>
+            <thead><tr>{["Item", "Category", "Qty", "Priority", "Requested By", "Date", "Status", ...(isAdmin ? [""] : [])].map((h) => <TH key={h || 'actions'}>{h}</TH>)}</tr></thead>
             <tbody>
               {needs.map((need, i) => (
                 <tr key={need.id} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : "#FAFBFC" }}>
@@ -200,6 +242,7 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds, user }) => {
                   <TD style={{ color: C.textMid, fontSize: 13 }}>{need.requestedBy}</TD>
                   <TD style={{ color: C.textMid, fontSize: 13 }}>{need.dateRequested}</TD>
                   <TD><Badge label={need.status} color={statusColor(need.status)} /></TD>
+                  {isAdmin && <TD style={{ textAlign: "right" }}><button onClick={() => openNeedModal(need)} style={{ border: `1px solid ${C.primary}`, background: C.primary + '10', color: C.primary, fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>Edit</button></TD>}
                 </tr>
               ))}
             </tbody>
@@ -226,7 +269,7 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds, user }) => {
       )}
 
       {showAddNeed && isAdmin && (
-        <Modal title="Add Need / Request" onClose={() => setShowAddNeed(false)}>
+        <Modal title={editingNeed ? "Edit Need / Request" : "Add Need / Request"} onClose={closeNeedModal}>
           {needError && <div style={{ background: "#FEF2F2", color: C.danger, padding: "10px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{needError}</div>}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <Input label="Item / Need" value={needForm.item} onChange={(e) => setNeedForm({ ...needForm, item: e.target.value })} placeholder="What is needed?" required />
@@ -235,10 +278,11 @@ const InventoryPage = ({ inventory, setInventory, needs, setNeeds, user }) => {
             <SelectField label="Priority" value={needForm.priority} onChange={(e) => setNeedForm({ ...needForm, priority: e.target.value })} options={["High", "Medium", "Low"]} />
             <Input label="Requested By" value={needForm.requestedBy} onChange={(e) => setNeedForm({ ...needForm, requestedBy: e.target.value })} placeholder="Staff name" />
             <Input label="Date Requested" type="date" value={needForm.dateRequested} onChange={(e) => setNeedForm({ ...needForm, dateRequested: e.target.value })} />
+            <SelectField label="Status" value={needForm.status} onChange={(e) => setNeedForm({ ...needForm, status: e.target.value })} options={["Pending", "Completed"]} />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
-            <Btn label="Cancel" variant="ghost" onClick={() => setShowAddNeed(false)} />
-            <Btn label={needLoading ? "Submitting..." : "Submit Request"} onClick={addNeed} disabled={needLoading} />
+            <Btn label="Cancel" variant="ghost" onClick={closeNeedModal} />
+            <Btn label={needLoading ? (editingNeed ? "Saving..." : "Submitting...") : (editingNeed ? "Save Changes" : "Submit Request")} onClick={saveNeed} disabled={needLoading} />
           </div>
         </Modal>
       )}

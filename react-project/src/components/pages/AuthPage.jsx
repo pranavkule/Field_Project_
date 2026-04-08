@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import C from "../../constants/colors";
 import Btn from "../ui/Btn";
 import Input from "../ui/Input";
-import apiClient from "../../api/apiClient";
+import authAPI from "../../api/authService";
+
+const PENDING_KEY = "pending_registration_request";
 
 const AuthPage = ({ mode, onAuth, switchMode }) => {
   const [email, setEmail] = useState("");
@@ -13,6 +15,55 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingRequest, setPendingRequest] = useState(null);
+  const [pendingStatus, setPendingStatus] = useState("pending");
+
+  const clearPendingRequest = () => {
+    localStorage.removeItem(PENDING_KEY);
+    setPendingRequest(null);
+    setPendingStatus("pending");
+  };
+
+  const checkPendingStatus = async (requestId) => {
+    try {
+      const response = await authAPI.getRequestStatus(requestId);
+      const status = response.data?.data?.status || "pending";
+      setPendingStatus(status);
+
+      if (status !== "pending") {
+        localStorage.removeItem(PENDING_KEY);
+      }
+    } catch (err) {
+      console.error("Failed to fetch registration status", err);
+    }
+  };
+
+  useEffect(() => {
+    if (mode !== "signup") return;
+
+    const raw = localStorage.getItem(PENDING_KEY);
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.request_id) {
+        setPendingRequest(parsed);
+        checkPendingStatus(parsed.request_id);
+      }
+    } catch (err) {
+      localStorage.removeItem(PENDING_KEY);
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (!pendingRequest?.request_id || pendingStatus !== "pending") return;
+
+    const timer = setInterval(() => {
+      checkPendingStatus(pendingRequest.request_id);
+    }, 15000);
+
+    return () => clearInterval(timer);
+  }, [pendingRequest, pendingStatus]);
 
   const handle = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -24,8 +75,7 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
     
     try {
       if (mode === "signup") {
-        // Register new user
-        const registerRes = await apiClient.post("/auth/register", {
+        const registerRes = await authAPI.register({
           email: normalizedEmail,
           password,
           name,
@@ -33,24 +83,23 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
           role,
         });
 
-        const { token, user } = registerRes.data.data;
-        if (!token || !user) {
-          throw new Error("Registration response invalid");
+        const requestData = registerRes.data?.data;
+        if (!requestData?.request_id) {
+          throw new Error("Registration request response invalid");
         }
 
-        localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
-        
-        onAuth({
-          name: user.name || "Admin",
-          email: user.email,
-          org: user.organization || "CareSync Institution",
-          initials: user.name?.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "AD",
-          role: user.role,
-        });
+        const nextPending = {
+          request_id: requestData.request_id,
+          name,
+          email: normalizedEmail,
+          role,
+          organization: org || "CareSync Institution",
+        };
+        localStorage.setItem(PENDING_KEY, JSON.stringify(nextPending));
+        setPendingRequest(nextPending);
+        setPendingStatus("pending");
       } else {
-        // Login existing user
-        const loginRes = await apiClient.post("/auth/login", { email: normalizedEmail, password });
+        const loginRes = await authAPI.login({ email: normalizedEmail, password });
         
         const { token, user } = loginRes.data.data;
         localStorage.setItem("token", token);
@@ -75,6 +124,50 @@ const AuthPage = ({ mode, onAuth, switchMode }) => {
       setLoading(false);
     }
   };
+
+  if (mode === "signup" && pendingRequest) {
+    const statusConfig = pendingStatus === "approved"
+      ? {
+          title: "Registration approved",
+          message: "Your request has been approved by NGO. You can now sign in.",
+          color: C.success,
+        }
+      : pendingStatus === "declined"
+        ? {
+            title: "Registration declined",
+            message: "Your request was declined by NGO. You can submit a new registration request.",
+            color: C.danger,
+          }
+        : {
+            title: "Waiting for confirmation from NGO",
+            message: "Your registration request has been sent to super admin and is awaiting approval.",
+            color: C.warning,
+          };
+
+    return (
+      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ width: "100%", maxWidth: 560, background: C.white, borderRadius: 22, boxShadow: "0 24px 80px rgba(0,0,0,0.1)", padding: 36 }}>
+          <h2 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: C.text }}>{statusConfig.title}</h2>
+          <p style={{ margin: "10px 0 18px", color: C.textMid, fontSize: 14, lineHeight: 1.7 }}>{statusConfig.message}</p>
+          <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, padding: 14, background: "#FAFBFC", marginBottom: 18 }}>
+            <div style={{ fontSize: 13, color: C.textMid, marginBottom: 6 }}><strong style={{ color: C.text }}>Name:</strong> {pendingRequest.name}</div>
+            <div style={{ fontSize: 13, color: C.textMid, marginBottom: 6 }}><strong style={{ color: C.text }}>Email:</strong> {pendingRequest.email}</div>
+            <div style={{ fontSize: 13, color: C.textMid, marginBottom: 6 }}><strong style={{ color: C.text }}>Role:</strong> {pendingRequest.role}</div>
+            <div style={{ fontSize: 13, color: C.textMid }}><strong style={{ color: C.text }}>Institution:</strong> {pendingRequest.organization}</div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: statusConfig.color, textTransform: "capitalize" }}>Status: {pendingStatus}</span>
+            <div style={{ display: "flex", gap: 8 }}>
+              {pendingStatus === "pending" && <Btn label="Refresh Status" variant="outline" onClick={() => checkPendingStatus(pendingRequest.request_id)} />}
+              {pendingStatus === "approved" && <Btn label="Go To Sign In" onClick={switchMode} />}
+              {pendingStatus === "declined" && <Btn label="Submit New Request" onClick={clearPendingRequest} />}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>

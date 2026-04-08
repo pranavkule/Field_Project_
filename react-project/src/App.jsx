@@ -21,7 +21,9 @@ import donationAPI from './api/donationService';
 import expenseAPI from './api/expenseService';
 import inventoryAPI from './api/inventoryService';
 import staffAPI from './api/staffService';
-import apiClient from './api/apiClient';
+import authAPI from './api/authService';
+
+const SUPER_ADMIN_EMAIL = 'suryodaybalgruh@gmail.com';
 
 const normalizeRole = (role) => {
   const value = typeof role === 'string' ? role.trim().toLowerCase() : '';
@@ -46,7 +48,13 @@ export default function App() {
     if (savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
-        return parsedUser ? { ...parsedUser, role: normalizeRole(parsedUser.role) } : null;
+        return parsedUser
+          ? {
+              ...parsedUser,
+              email: (parsedUser.email || '').trim().toLowerCase(),
+              role: normalizeRole(parsedUser.role),
+            }
+          : null;
       } catch (e) {
         return null;
       }
@@ -63,6 +71,43 @@ export default function App() {
   const [needs, setNeeds] = useState([]);
   const [healthRecords, setHealthRecords] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pendingRegistrations, setPendingRegistrations] = useState([]);
+  const [pendingRegistrationsLoading, setPendingRegistrationsLoading] = useState(false);
+
+  const normalizedUserEmail = (user?.email || '').trim().toLowerCase();
+  const isSuperAdmin = normalizedUserEmail === SUPER_ADMIN_EMAIL || user?.user_id === 'superadmin-local';
+
+  const loadPendingRegistrations = async () => {
+    if (!isSuperAdmin || !localStorage.getItem('token')) return;
+
+    setPendingRegistrationsLoading(true);
+    try {
+      const response = await authAPI.getPendingRequests();
+      setPendingRegistrations(response.data?.data?.items || []);
+    } catch (error) {
+      console.error('Failed to fetch pending registrations:', error);
+    } finally {
+      setPendingRegistrationsLoading(false);
+    }
+  };
+
+  const handleApproveRegistration = async (requestId) => {
+    try {
+      await authAPI.approveRequest(requestId);
+      await loadPendingRegistrations();
+    } catch (error) {
+      console.error('Failed to approve registration:', error);
+    }
+  };
+
+  const handleDeclineRegistration = async (requestId) => {
+    try {
+      await authAPI.declineRequest(requestId);
+      await loadPendingRegistrations();
+    } catch (error) {
+      console.error('Failed to decline registration:', error);
+    }
+  };
 
   // Fetch data from backend when user is logged in
   useEffect(() => {
@@ -71,8 +116,8 @@ export default function App() {
       
       setLoading(true);
       try {
-        // Fetch all data from backend in parallel
-        const [childrenRes, staffRes, healthRes, donationsRes, expensesRes, inventoryRes] = await Promise.all([
+        // Fetch all data in parallel, but keep partial successes if one endpoint fails.
+        const [childrenRes, staffRes, healthRes, donationsRes, expensesRes, inventoryRes] = await Promise.allSettled([
           childAPI.getAll(),
           staffAPI.getAll(),
           healthAPI.getAll(),
@@ -81,9 +126,8 @@ export default function App() {
           inventoryAPI.getAll(),
         ]);
 
-        // Update state with fetched data
-        if (childrenRes.data.data && childrenRes.data.data.items) {
-          const childItems = childrenRes.data.data.items;
+        if (childrenRes.status === 'fulfilled' && childrenRes.value.data.data && childrenRes.value.data.data.items) {
+          const childItems = childrenRes.value.data.data.items;
           setChildren(childItems.map((item) => ({
             id: item.child_id,
             first_name: item.first_name,
@@ -101,31 +145,37 @@ export default function App() {
             education_level: item.education_level,
             photo: item.photo_url || (item.first_name || "").slice(0,1).toUpperCase() + (item.last_name || "").slice(0,1).toUpperCase(),
           })));
+        } else if (childrenRes.status === 'rejected') {
+          console.error('Failed to fetch children:', childrenRes.reason);
         }
-        
-        const staffPayload = staffRes?.data?.data;
-        const staffItems = Array.isArray(staffPayload)
-          ? staffPayload
-          : Array.isArray(staffPayload?.items)
-            ? staffPayload.items
-            : [];
 
-        setStaff(staffItems.map((item) => ({
-          id: item.staff_id,
-          name: `${item.first_name || ""} ${item.last_name || ""}`.trim(),
-          role: item.role || "",
-          dept: item.department || "",
-          phone: item.contact_number || "",
-          email: item.email || "",
-          joinDate: item.joining_date ? new Date(item.joining_date).toISOString().split('T')[0] : "",
-          shift: item.shift || "Morning",
-          status: item.status || "Active",
-          photo: (item.first_name || "").slice(0, 1).toUpperCase() + (item.last_name || "").slice(0, 1).toUpperCase(),
-        })));
+        if (staffRes.status === 'fulfilled') {
+          const staffPayload = staffRes.value?.data?.data;
+          const staffItems = Array.isArray(staffPayload)
+            ? staffPayload
+            : Array.isArray(staffPayload?.items)
+              ? staffPayload.items
+              : [];
 
-        if (healthRes.data.data && Array.isArray(healthRes.data.data)) {
-          const childItems = childrenRes.data.data?.items || [];
-          setHealthRecords(healthRes.data.data.map((item) => ({
+          setStaff(staffItems.map((item) => ({
+            id: item.staff_id,
+            name: `${item.first_name || ""} ${item.last_name || ""}`.trim(),
+            role: item.role || "",
+            dept: item.department || "",
+            phone: item.contact_number || "",
+            email: item.email || "",
+            joinDate: item.joining_date ? new Date(item.joining_date).toISOString().split('T')[0] : "",
+            shift: item.shift || "Morning",
+            status: item.status || "Active",
+            photo: (item.first_name || "").slice(0, 1).toUpperCase() + (item.last_name || "").slice(0, 1).toUpperCase(),
+          })));
+        } else {
+          console.error('Failed to fetch staff:', staffRes.reason);
+        }
+
+        if (healthRes.status === 'fulfilled' && healthRes.value.data.data && Array.isArray(healthRes.value.data.data)) {
+          const childItems = childrenRes.status === 'fulfilled' ? (childrenRes.value.data.data?.items || []) : [];
+          setHealthRecords(healthRes.value.data.data.map((item) => ({
             id: item.health_id,
             childId: item.child_id,
             childName: childItems.find((child) => child.child_id === item.child_id)
@@ -138,10 +188,12 @@ export default function App() {
             status: item.status || "Pending",
             followUp: item.follow_up || "",
           })));
+        } else if (healthRes.status === 'rejected') {
+          console.error('Failed to fetch health records:', healthRes.reason);
         }
 
-        if (donationsRes.data.data && Array.isArray(donationsRes.data.data)) {
-          setNeeds(donationsRes.data.data.map((item) => ({
+        if (donationsRes.status === 'fulfilled' && donationsRes.value.data.data && Array.isArray(donationsRes.value.data.data)) {
+          setNeeds(donationsRes.value.data.data.map((item) => ({
             id: item.donation_id,
             item: item.item_name,
             category: item.category,
@@ -151,10 +203,12 @@ export default function App() {
             dateRequested: item.date_received ? new Date(item.date_received).toISOString().split('T')[0] : "",
             status: item.quantity_received >= item.quantity_required ? "Completed" : "Pending",
           })));
+        } else if (donationsRes.status === 'rejected') {
+          console.error('Failed to fetch donations:', donationsRes.reason);
         }
-        
-        if (expensesRes.data.data && Array.isArray(expensesRes.data.data)) {
-          setExpenses(expensesRes.data.data.map((item) => ({
+
+        if (expensesRes.status === 'fulfilled' && expensesRes.value.data.data && Array.isArray(expensesRes.value.data.data)) {
+          setExpenses(expensesRes.value.data.data.map((item) => ({
             id: item.expense_id,
             date: item.expense_date ? new Date(item.expense_date).toISOString().split('T')[0] : "",
             description: item.description,
@@ -163,10 +217,12 @@ export default function App() {
             paymentMode: item.payment_mode,
             receipt: item.receipt || "",
           })));
+        } else if (expensesRes.status === 'rejected') {
+          console.error('Failed to fetch expenses:', expensesRes.reason);
         }
-        
-        if (inventoryRes.data.data && Array.isArray(inventoryRes.data.data)) {
-          setInventory(inventoryRes.data.data.map((item) => ({
+
+        if (inventoryRes.status === 'fulfilled' && inventoryRes.value.data.data && Array.isArray(inventoryRes.value.data.data)) {
+          setInventory(inventoryRes.value.data.data.map((item) => ({
             id: item.item_id,
             item: item.item_name,
             category: item.category,
@@ -176,6 +232,8 @@ export default function App() {
             status: "Adequate",
             lastUpdated: item.last_updated ? new Date(item.last_updated).toISOString().split('T')[0] : "",
           })));
+        } else if (inventoryRes.status === 'rejected') {
+          console.error('Failed to fetch inventory:', inventoryRes.reason);
         }
       } catch (err) {
         console.error('Failed to fetch data:', err);
@@ -189,8 +247,24 @@ export default function App() {
     }
   }, [user, screen]);
 
+  useEffect(() => {
+    if (!isSuperAdmin || screen !== 'app') return;
+
+    loadPendingRegistrations();
+    const timer = setInterval(loadPendingRegistrations, 15000);
+    return () => clearInterval(timer);
+  }, [isSuperAdmin, screen]);
+
   const handleAuth = (u) => {
-    setUser(u ? { ...u, role: normalizeRole(u.role) } : u);
+    const nextUser = u
+      ? {
+          ...u,
+          email: (u.email || '').trim().toLowerCase(),
+          role: normalizeRole(u.role),
+        }
+      : u;
+
+    setUser(nextUser);
     setScreen('app');
     setPage('dashboard');
   };
@@ -218,12 +292,74 @@ export default function App() {
     );
   }
 
+  const renderApprovalCenter = () => (
+    <div style={{ padding: 32 }}>
+      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, boxShadow: '0 8px 24px rgba(0,0,0,0.05)' }}>
+        <h2 style={{ margin: 0, color: C.text, fontSize: 22, fontWeight: 800 }}>Registration Approval Center</h2>
+        <p style={{ margin: '8px 0 0', color: C.textMid, fontSize: 14 }}>
+          New signup requests appear here. Accept or decline each request to complete onboarding.
+        </p>
+      </div>
+
+      <div style={{ marginTop: 18, background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#F8FAFC' }}>
+              <th style={{ textAlign: 'left', padding: 12, fontSize: 13, color: C.textMid }}>Name</th>
+              <th style={{ textAlign: 'left', padding: 12, fontSize: 13, color: C.textMid }}>Email</th>
+              <th style={{ textAlign: 'left', padding: 12, fontSize: 13, color: C.textMid }}>Role</th>
+              <th style={{ textAlign: 'left', padding: 12, fontSize: 13, color: C.textMid }}>Institution</th>
+              <th style={{ textAlign: 'left', padding: 12, fontSize: 13, color: C.textMid }}>Requested At</th>
+              <th style={{ textAlign: 'right', padding: 12, fontSize: 13, color: C.textMid }}>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pendingRegistrations.map((request) => (
+              <tr key={request.request_id} style={{ borderTop: `1px solid ${C.border}` }}>
+                <td style={{ padding: 12, color: C.text, fontSize: 14, fontWeight: 700 }}>{request.name}</td>
+                <td style={{ padding: 12, color: C.textMid, fontSize: 13 }}>{request.email}</td>
+                <td style={{ padding: 12, color: C.textMid, fontSize: 13, textTransform: 'capitalize' }}>{request.role}</td>
+                <td style={{ padding: 12, color: C.textMid, fontSize: 13 }}>{request.organization || 'CareSync Institution'}</td>
+                <td style={{ padding: 12, color: C.textMid, fontSize: 13 }}>{request.created_at ? new Date(request.created_at).toLocaleString() : '-'}</td>
+                <td style={{ padding: 12, textAlign: 'right' }}>
+                  <div style={{ display: 'inline-flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => handleApproveRegistration(request.request_id)}
+                      style={{ border: `1px solid ${C.success}`, background: '#ECFDF3', color: C.success, fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      Accept
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeclineRegistration(request.request_id)}
+                      style={{ border: `1px solid ${C.danger}`, background: '#FEF2F2', color: C.danger, fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {pendingRegistrations.length === 0 && (
+          <div style={{ padding: 20, textAlign: 'center', color: C.textMid, fontSize: 14 }}>
+            {pendingRegistrationsLoading ? 'Checking new requests...' : 'No pending registration requests'}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const renderPage = () => {
     if (page === 'childProfile' && selectedChild) {
       return <ChildProfile child={selectedChild} user={user} setChildren={setChildren} setSelectedChild={setSelectedChild} goBack={() => setPage('children')} />;
     }
 
     switch (page) {
+      case 'approvalCenter':
+        return isSuperAdmin ? renderApprovalCenter() : <Dashboard setPage={setPage} children={children} staff={staff} expenses={expenses} inventory={inventory} />;
       case 'dashboard':
         return <Dashboard setPage={setPage} children={children} staff={staff} expenses={expenses} inventory={inventory} />;
       case 'children':
@@ -245,9 +381,17 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "'Inter', 'DM Sans','Segoe UI',system-ui,sans-serif", display: 'flex', minHeight: '100vh', background: C.bg, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.02)' }}>
-      <Sidebar active={page} setPage={(p) => { setPage(p); setSelectedChild(null); }} onLogout={handleLogout} />
+      <Sidebar active={page} setPage={(p) => { setPage(p); setSelectedChild(null); }} onLogout={handleLogout} isSuperAdmin={isSuperAdmin} />
       <main style={{ flex: 1, overflowY: 'auto', minHeight: '100vh', background: 'linear-gradient(135deg, #ffffff 0%, #fafbfc 100%)' }}>
-        <Topbar user={user} />
+        <Topbar
+          user={user}
+          isSuperAdmin={isSuperAdmin}
+          pendingRegistrations={pendingRegistrations}
+          pendingRegistrationsLoading={pendingRegistrationsLoading}
+          onRefreshRegistrations={loadPendingRegistrations}
+          onApproveRegistration={handleApproveRegistration}
+          onDeclineRegistration={handleDeclineRegistration}
+        />
         {renderPage()}
       </main>
     </div>

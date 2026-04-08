@@ -1,7 +1,15 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { register, login, me } = require('../controllers/auth.controller');
+const {
+  register,
+  login,
+  me,
+  getRegistrationRequests,
+  getRegistrationRequestStatus,
+  approveRegistrationRequest,
+  declineRegistrationRequest,
+} = require('../controllers/auth.controller');
 const authMiddleware = require('../middlewares/authMiddleware');
 const validate = require('../middlewares/validate');
 const { registerValidator } = require('../validators/authValidator');
@@ -18,5 +26,9 @@ const authLimiter = rateLimit({
 router.post('/register', authLimiter, registerValidator, validate, register);
 router.post('/login', authLimiter, login);
 router.get('/me', authMiddleware, me);
+router.get('/registration-requests/status/:id', getRegistrationRequestStatus);
+router.get('/registration-requests', authMiddleware, getRegistrationRequests);
+router.post('/registration-requests/:id/approve', authMiddleware, approveRegistrationRequest);
+router.post('/registration-requests/:id/decline', authMiddleware, declineRegistrationRequest);
 
 module.exports = router;

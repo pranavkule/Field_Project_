@@ -1,5 +1,5 @@
 import C from "../../constants/colors";
-import { LayoutDashboard, Users, UserCheck, Heart, ClipboardList, Package, DollarSign, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, UserCheck, Heart, ClipboardList, Package, DollarSign, ShieldCheck, LogOut } from "lucide-react";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -11,7 +11,16 @@ const NAV = [
   { id: "expenses", label: "Expense Tracker", icon: DollarSign },
 ];
 
-const Sidebar = ({ active, setPage, onLogout }) => (
+const Sidebar = ({ active, setPage, onLogout, isSuperAdmin = false }) => {
+  const navItems = isSuperAdmin
+    ? [
+        NAV[0],
+        { id: "approvalCenter", label: "Approval Center", icon: ShieldCheck },
+        ...NAV.slice(1),
+      ]
+    : NAV;
+
+  return (
   <aside style={{ width: 240, background: C.white, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0, boxShadow: "2px 0 8px rgba(0,0,0,0.05)" }}>
     <div style={{ padding: "24px 24px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -39,7 +48,7 @@ const Sidebar = ({ active, setPage, onLogout }) => (
       </div>
     </div>
     <nav style={{ flex: 1, padding: "8px 14px", overflowY: "auto" }}>
-      {NAV.map((n) => (
+      {navItems.map((n) => (
         <button
           key={n.id}
           onClick={() => setPage(n.id)}
@@ -60,6 +69,7 @@ const Sidebar = ({ active, setPage, onLogout }) => (
       </button>
     </div>
   </aside>
-);
+  );
+};
 
 export default Sidebar;
